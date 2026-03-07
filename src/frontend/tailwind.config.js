@@ -17,7 +17,7 @@ export default {
     extend: {
       fontFamily: {
         sans: ['"Plus Jakarta Sans"', "system-ui", "sans-serif"],
-        heading: ['"Outfit"', "system-ui", "sans-serif"],
+        heading: ['"Bricolage Grotesque"', '"Outfit"', "system-ui", "sans-serif"],
       },
       colors: {
         border: "oklch(var(--border))",
@@ -53,6 +53,7 @@ export default {
           DEFAULT: "oklch(var(--card))",
           foreground: "oklch(var(--card-foreground))",
         },
+        gold: "oklch(var(--accent) / <alpha-value>)",
         chart: {
           1: "oklch(var(--chart-1))",
           2: "oklch(var(--chart-2))",

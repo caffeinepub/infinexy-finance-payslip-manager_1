@@ -16,17 +16,22 @@ export default function PayslipView({ id }: Props) {
 
   useEffect(() => {
     if (!actor) return;
+    let cancelled = false;
     const load = async () => {
+      setLoading(true);
       try {
         const data = await actor.getPayslip(BigInt(id));
-        setPayslip(data);
+        if (!cancelled) setPayslip(data);
       } catch {
-        toast.error("Failed to load payslip");
+        if (!cancelled) toast.error("Failed to load payslip");
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
     load();
+    return () => {
+      cancelled = true;
+    };
   }, [actor, id]);
 
   if (loading) {
@@ -65,6 +70,11 @@ export default function PayslipView({ id }: Props) {
     p.deductions.employeeESIDeduction + p.deductions.professionalTax;
 
   const fmt = (n: number) => n.toFixed(2);
+
+  // B&W colour constants
+  const border = "#000000";
+  const lightBg = "#f2f2f2";
+  const totalBg = "#e0e0e0";
 
   return (
     <div className="min-h-screen bg-background">
@@ -113,336 +123,736 @@ export default function PayslipView({ id }: Props) {
       <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8">
         <div
           id="payslip-document"
-          className="bg-white text-black border border-gray-300 p-8 font-sans text-sm"
-          style={{ fontFamily: "Arial, sans-serif" }}
+          className="bg-white text-black text-sm"
+          style={{
+            fontFamily: "Arial, sans-serif",
+            border: `2px solid ${border}`,
+            overflow: "hidden",
+          }}
         >
-          {/* Company Header */}
-          <div className="text-center mb-2 flex justify-center">
-            <img
-              src="/assets/uploads/WhatsApp-Image-2026-02-27-at-11.18.04-AM-1.jpeg"
-              alt="Infinexy Finance"
-              className="h-16 w-auto object-contain"
-            />
-          </div>
-          <div className="text-center mb-1">
-            <p className="text-xs text-gray-600">
+          {/* ── Company Header ── */}
+          <div
+            style={{
+              background: "#ffffff",
+              padding: "16px 24px 10px",
+              textAlign: "center",
+              borderBottom: `2px solid ${border}`,
+            }}
+          >
+            <h1
+              style={{
+                color: "#000000",
+                fontSize: "20px",
+                fontWeight: "900",
+                letterSpacing: "3px",
+                textTransform: "uppercase",
+                margin: "0 0 4px",
+              }}
+            >
+              INFINEXY FINANCE
+            </h1>
+            <p
+              style={{
+                color: "#333333",
+                fontSize: "11px",
+                margin: 0,
+                letterSpacing: "0.4px",
+              }}
+            >
               401,402 Galav Chamber Dairy Den Sayajigunj Vadodara Gujarat-390005
             </p>
           </div>
-          <div className="text-center mb-1">
-            <h2 className="text-base font-bold">Pay Slip</h2>
-            <p className="text-sm">
-              for {p.payPeriod.month}-{p.payPeriod.year}
+
+          {/* ── Pay Slip Title Band ── */}
+          <div
+            style={{
+              background: "#ffffff",
+              padding: "7px 24px",
+              textAlign: "center",
+              borderBottom: `1px solid ${border}`,
+            }}
+          >
+            <h2
+              style={{
+                color: "#000000",
+                fontSize: "13px",
+                fontWeight: "800",
+                letterSpacing: "2px",
+                textTransform: "uppercase",
+                margin: "0 0 2px",
+              }}
+            >
+              PAY SLIP
+            </h2>
+            <p style={{ color: "#333333", fontSize: "11px", margin: 0 }}>
+              for{" "}
+              <strong style={{ color: "#000000" }}>
+                {p.payPeriod.month}-{p.payPeriod.year}
+              </strong>
             </p>
           </div>
 
-          <div className="text-center mt-4 mb-4">
-            <h3 className="text-base font-bold uppercase underline tracking-wider">
+          {/* ── Employee Name Banner ── */}
+          <div
+            style={{
+              background: lightBg,
+              borderBottom: `1px solid ${border}`,
+              padding: "8px 24px",
+              textAlign: "center",
+            }}
+          >
+            <h3
+              style={{
+                color: "#000000",
+                fontSize: "14px",
+                fontWeight: "900",
+                letterSpacing: "2px",
+                textTransform: "uppercase",
+                margin: 0,
+              }}
+            >
               {p.employeeName}
             </h3>
           </div>
 
-          {/* Employee Info Table */}
-          <table className="w-full border-collapse border border-gray-400 mb-4 text-xs">
-            <tbody>
-              <tr>
-                <td className="border border-gray-300 px-2 py-1 w-1/4 text-gray-600">
-                  Employee Number
-                </td>
-                <td className="border border-gray-300 px-2 py-1 w-1/4">
-                  : {p.employeeNumber}
-                </td>
-                <td className="border border-gray-300 px-2 py-1 w-1/4 text-gray-600">
-                  Tax Regime
-                </td>
-                <td className="border border-gray-300 px-2 py-1 w-1/4">
-                  : {p.taxRegime}
-                </td>
-              </tr>
-              <tr>
-                <td className="border border-gray-300 px-2 py-1 text-gray-600">
-                  Function
-                </td>
-                <td className="border border-gray-300 px-2 py-1">
-                  : {p.functionRole}
-                </td>
-                <td className="border border-gray-300 px-2 py-1 text-gray-600">
-                  Income Tax Number (PAN)
-                </td>
-                <td className="border border-gray-300 px-2 py-1">: {p.pan}</td>
-              </tr>
-              <tr>
-                <td className="border border-gray-300 px-2 py-1 text-gray-600">
-                  Designation
-                </td>
-                <td className="border border-gray-300 px-2 py-1">
-                  : {p.designation}
-                </td>
-                <td className="border border-gray-300 px-2 py-1 text-gray-600">
-                  Universal Account Number (UAN)
-                </td>
-                <td className="border border-gray-300 px-2 py-1">: {p.uan}</td>
-              </tr>
-              <tr>
-                <td className="border border-gray-300 px-2 py-1 text-gray-600">
-                  Location
-                </td>
-                <td className="border border-gray-300 px-2 py-1">
-                  : {p.location}
-                </td>
-                <td className="border border-gray-300 px-2 py-1 text-gray-600">
-                  PF account number
-                </td>
-                <td className="border border-gray-300 px-2 py-1">
-                  : {p.pfAccountNumber}
-                </td>
-              </tr>
-              <tr>
-                <td className="border border-gray-300 px-2 py-1 text-gray-600">
-                  Bank Details
-                </td>
-                <td className="border border-gray-300 px-2 py-1">
-                  : {p.bankDetails}
-                </td>
-                <td className="border border-gray-300 px-2 py-1 text-gray-600">
-                  ESI Number
-                </td>
-                <td className="border border-gray-300 px-2 py-1">
-                  : {p.esiNumber}
-                </td>
-              </tr>
-              <tr>
-                <td className="border border-gray-300 px-2 py-1 text-gray-600">
-                  Date of joining
-                </td>
-                <td className="border border-gray-300 px-2 py-1">
-                  : {p.dateOfJoining}
-                </td>
-                <td className="border border-gray-300 px-2 py-1 text-gray-600">
-                  PR Account Number (PRAN)
-                </td>
-                <td className="border border-gray-300 px-2 py-1">: {p.pran}</td>
-              </tr>
-            </tbody>
-          </table>
+          {/* ── Document body ── */}
+          <div style={{ padding: "14px 14px 18px" }}>
+            {/* Employee Info Table */}
+            <table
+              style={{
+                width: "100%",
+                borderCollapse: "collapse",
+                border: `1px solid ${border}`,
+                marginBottom: "12px",
+                fontSize: "11px",
+              }}
+            >
+              <tbody>
+                {(
+                  [
+                    [
+                      "Employee Number",
+                      p.employeeNumber,
+                      "Tax Regime",
+                      p.taxRegime,
+                    ],
+                    [
+                      "Function",
+                      p.functionRole,
+                      "Income Tax Number (PAN)",
+                      p.pan,
+                    ],
+                    [
+                      "Designation",
+                      p.designation,
+                      "Universal Account Number (UAN)",
+                      p.uan,
+                    ],
+                    [
+                      "Location",
+                      p.location,
+                      "PF Account Number",
+                      p.pfAccountNumber,
+                    ],
+                    ["Bank Details", p.bankDetails, "ESI Number", p.esiNumber],
+                    [
+                      "Date of Joining",
+                      p.dateOfJoining,
+                      "PR Account Number (PRAN)",
+                      p.pran,
+                    ],
+                  ] as [string, string, string, string][]
+                ).map(([label1, val1, label2, val2], idx) => (
+                  <tr
+                    key={label1}
+                    style={{
+                      backgroundColor: idx % 2 === 0 ? "#ffffff" : "#f7f7f7",
+                    }}
+                  >
+                    <td
+                      style={{
+                        border: `1px solid ${border}`,
+                        padding: "4px 8px",
+                        width: "25%",
+                        fontWeight: "700",
+                        color: "#000000",
+                      }}
+                    >
+                      {label1}
+                    </td>
+                    <td
+                      style={{
+                        border: `1px solid ${border}`,
+                        padding: "4px 8px",
+                        width: "25%",
+                        fontWeight: "700",
+                        color: "#000000",
+                      }}
+                    >
+                      : {val1}
+                    </td>
+                    <td
+                      style={{
+                        border: `1px solid ${border}`,
+                        padding: "4px 8px",
+                        width: "25%",
+                        fontWeight: "700",
+                        color: "#000000",
+                      }}
+                    >
+                      {label2}
+                    </td>
+                    <td
+                      style={{
+                        border: `1px solid ${border}`,
+                        padding: "4px 8px",
+                        width: "25%",
+                        fontWeight: "700",
+                        color: "#000000",
+                      }}
+                    >
+                      : {val2}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
 
-          {/* Attendance + Leave Table */}
-          <table className="w-full border-collapse border border-gray-400 mb-4 text-xs">
-            <thead>
-              <tr>
-                <th className="border border-gray-400 px-2 py-1 text-left font-bold bg-gray-50 w-1/3">
-                  Attendance Details
-                </th>
-                <th className="border border-gray-400 px-2 py-1 text-left font-bold bg-gray-50 w-1/6">
-                  Value
-                </th>
-                <th
-                  className="border border-gray-400 px-2 py-1 text-left font-bold bg-gray-50"
-                  colSpan={2}
+            {/* Attendance + Leave Table */}
+            <table
+              style={{
+                width: "100%",
+                borderCollapse: "collapse",
+                border: `1px solid ${border}`,
+                marginBottom: "12px",
+                fontSize: "11px",
+              }}
+            >
+              <thead>
+                <tr>
+                  <th
+                    style={{
+                      backgroundColor: "#ffffff",
+                      color: "#000000",
+                      border: `1px solid ${border}`,
+                      padding: "6px 8px",
+                      textAlign: "left",
+                      fontWeight: "800",
+                      width: "33%",
+                    }}
+                  >
+                    Attendance Details
+                  </th>
+                  <th
+                    style={{
+                      backgroundColor: "#ffffff",
+                      color: "#000000",
+                      border: `1px solid ${border}`,
+                      padding: "6px 8px",
+                      textAlign: "left",
+                      fontWeight: "800",
+                      width: "17%",
+                    }}
+                  >
+                    Value
+                  </th>
+                  <th
+                    colSpan={2}
+                    style={{
+                      backgroundColor: "#ffffff",
+                      color: "#000000",
+                      border: `1px solid ${border}`,
+                      padding: "6px 8px",
+                      textAlign: "left",
+                      fontWeight: "800",
+                    }}
+                  >
+                    Leave Details (In Days)
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {[
+                  [
+                    "Total Number of Days",
+                    `${p.attendance.totalDays.toString()} Days`,
+                    "Total Allow Leaves",
+                    `: ${p.leave.totalAllowLeaves.toString()} Days`,
+                  ],
+                  [
+                    "Present",
+                    `${p.attendance.present.toString()} Days`,
+                    "Used Leaves",
+                    `: ${p.leave.usedLeaves.toString()} Days`,
+                  ],
+                  [
+                    "Utilised Leave",
+                    `${p.attendance.utilisedLeave.toString()} Days`,
+                    "Balance Leaves",
+                    `: ${p.leave.balanceLeaves.toString()} Days`,
+                  ],
+                  [
+                    "Week Off",
+                    `${p.attendance.weekOff.toString()} Days`,
+                    "",
+                    "",
+                  ],
+                  ["Overtime", String(p.attendance.overtimeHrs), "", ""],
+                  [
+                    "Weekly Off Overtime",
+                    `${p.attendance.weeklyOffOvertimeDays.toString()} Day`,
+                    "",
+                    "",
+                  ],
+                ].map(([a, b, c, d], idx) => (
+                  <tr
+                    key={a || String(idx)}
+                    style={{
+                      backgroundColor: idx % 2 === 0 ? "#ffffff" : "#f7f7f7",
+                    }}
+                  >
+                    <td
+                      style={{
+                        border: `1px solid ${border}`,
+                        padding: "3px 8px",
+                        fontWeight: "700",
+                      }}
+                    >
+                      {a}
+                    </td>
+                    <td
+                      style={{
+                        border: `1px solid ${border}`,
+                        padding: "3px 8px",
+                        fontWeight: "700",
+                      }}
+                    >
+                      {b}
+                    </td>
+                    <td
+                      style={{
+                        border: `1px solid ${border}`,
+                        padding: "3px 8px",
+                        fontWeight: "600",
+                        color: "#333333",
+                      }}
+                    >
+                      {c}
+                    </td>
+                    <td
+                      style={{
+                        border: `1px solid ${border}`,
+                        padding: "3px 8px",
+                        fontWeight: "700",
+                      }}
+                    >
+                      {d}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            {/* Earnings + Deductions Table */}
+            <table
+              style={{
+                width: "100%",
+                borderCollapse: "collapse",
+                border: `1px solid ${border}`,
+                marginBottom: "12px",
+                fontSize: "11px",
+              }}
+            >
+              <thead>
+                <tr>
+                  <th
+                    style={{
+                      backgroundColor: "#ffffff",
+                      color: "#000000",
+                      border: `1px solid ${border}`,
+                      padding: "6px 8px",
+                      textAlign: "left",
+                      fontWeight: "800",
+                      width: "33%",
+                    }}
+                  >
+                    Earnings
+                  </th>
+                  <th
+                    style={{
+                      backgroundColor: "#ffffff",
+                      color: "#000000",
+                      border: `1px solid ${border}`,
+                      padding: "6px 8px",
+                      textAlign: "right",
+                      fontWeight: "800",
+                      width: "17%",
+                    }}
+                  >
+                    Amount
+                  </th>
+                  <th
+                    style={{
+                      backgroundColor: "#ffffff",
+                      color: "#000000",
+                      border: `1px solid ${border}`,
+                      padding: "6px 8px",
+                      textAlign: "left",
+                      fontWeight: "800",
+                      width: "33%",
+                    }}
+                  >
+                    Deductions
+                  </th>
+                  <th
+                    style={{
+                      backgroundColor: "#ffffff",
+                      color: "#000000",
+                      border: `1px solid ${border}`,
+                      padding: "6px 8px",
+                      textAlign: "right",
+                      fontWeight: "800",
+                      width: "17%",
+                    }}
+                  >
+                    Amount
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {/* Row 1 */}
+                <tr style={{ backgroundColor: "#ffffff" }}>
+                  <td
+                    style={{
+                      border: `1px solid ${border}`,
+                      padding: "3px 8px",
+                    }}
+                  >
+                    Basic Pay
+                  </td>
+                  <td
+                    style={{
+                      border: `1px solid ${border}`,
+                      padding: "3px 8px",
+                      textAlign: "right",
+                      fontWeight: "800",
+                    }}
+                  >
+                    {fmt(p.earnings.basicPay)}
+                  </td>
+                  <td
+                    style={{
+                      border: `1px solid ${border}`,
+                      padding: "3px 8px",
+                    }}
+                  >
+                    Employees ESI Deduction 0.75%
+                  </td>
+                  <td
+                    style={{
+                      border: `1px solid ${border}`,
+                      padding: "3px 8px",
+                      textAlign: "right",
+                      fontWeight: "800",
+                    }}
+                  >
+                    {fmt(p.deductions.employeeESIDeduction)}
+                  </td>
+                </tr>
+                {/* Row 2 */}
+                <tr style={{ backgroundColor: "#f7f7f7" }}>
+                  <td
+                    style={{
+                      border: `1px solid ${border}`,
+                      padding: "3px 8px",
+                    }}
+                  >
+                    Overtime
+                  </td>
+                  <td
+                    style={{
+                      border: `1px solid ${border}`,
+                      padding: "3px 8px",
+                      textAlign: "right",
+                      fontWeight: "800",
+                    }}
+                  >
+                    {fmt(p.earnings.overtimeAmount)}
+                  </td>
+                  <td
+                    style={{
+                      border: `1px solid ${border}`,
+                      padding: "3px 8px",
+                    }}
+                  >
+                    Professional Tax
+                  </td>
+                  <td
+                    style={{
+                      border: `1px solid ${border}`,
+                      padding: "3px 8px",
+                      textAlign: "right",
+                      fontWeight: "800",
+                    }}
+                  >
+                    {fmt(p.deductions.professionalTax)}
+                  </td>
+                </tr>
+                {/* Row 3 */}
+                <tr style={{ backgroundColor: "#ffffff" }}>
+                  <td
+                    style={{
+                      border: `1px solid ${border}`,
+                      padding: "3px 8px",
+                    }}
+                  >
+                    Weekly Off Overtime
+                  </td>
+                  <td
+                    style={{
+                      border: `1px solid ${border}`,
+                      padding: "3px 8px",
+                      textAlign: "right",
+                      fontWeight: "800",
+                    }}
+                  >
+                    {fmt(p.earnings.weeklyOffOvertimeAmount)}
+                  </td>
+                  <td
+                    style={{
+                      border: `1px solid ${border}`,
+                      padding: "3px 8px",
+                    }}
+                  />
+                  <td
+                    style={{
+                      border: `1px solid ${border}`,
+                      padding: "3px 8px",
+                    }}
+                  />
+                </tr>
+                {/* Row 4 */}
+                <tr style={{ backgroundColor: "#f7f7f7" }}>
+                  <td
+                    style={{
+                      border: `1px solid ${border}`,
+                      padding: "3px 8px",
+                    }}
+                  >
+                    Employer E.S.I @3.25%
+                  </td>
+                  <td
+                    style={{
+                      border: `1px solid ${border}`,
+                      padding: "3px 8px",
+                      textAlign: "right",
+                      fontWeight: "800",
+                    }}
+                  >
+                    {fmt(p.earnings.employerESI)}
+                  </td>
+                  <td
+                    style={{
+                      border: `1px solid ${border}`,
+                      padding: "3px 8px",
+                    }}
+                  />
+                  <td
+                    style={{
+                      border: `1px solid ${border}`,
+                      padding: "3px 8px",
+                    }}
+                  />
+                </tr>
+
+                {/* Total Row */}
+                <tr style={{ backgroundColor: totalBg }}>
+                  <td
+                    style={{
+                      border: `2px solid ${border}`,
+                      padding: "5px 8px",
+                      fontWeight: "900",
+                      color: "#000000",
+                    }}
+                  >
+                    Total Earnings
+                  </td>
+                  <td
+                    style={{
+                      border: `2px solid ${border}`,
+                      padding: "5px 8px",
+                      textAlign: "right",
+                      fontWeight: "900",
+                      color: "#000000",
+                    }}
+                  >
+                    {fmt(totalEarnings)}
+                  </td>
+                  <td
+                    style={{
+                      border: `2px solid ${border}`,
+                      padding: "5px 8px",
+                      fontWeight: "900",
+                      color: "#000000",
+                    }}
+                  >
+                    Total Deductions
+                  </td>
+                  <td
+                    style={{
+                      border: `2px solid ${border}`,
+                      padding: "5px 8px",
+                      textAlign: "right",
+                      fontWeight: "900",
+                      color: "#000000",
+                    }}
+                  >
+                    {fmt(totalDeductions)}
+                  </td>
+                </tr>
+
+                {/* Employers Contribution Row */}
+                <tr style={{ backgroundColor: "#ebebeb" }}>
+                  <td
+                    style={{
+                      border: `1px solid ${border}`,
+                      padding: "3px 8px",
+                    }}
+                  />
+                  <td
+                    style={{
+                      border: `1px solid ${border}`,
+                      padding: "3px 8px",
+                    }}
+                  />
+                  <td
+                    style={{
+                      border: `2px solid ${border}`,
+                      padding: "5px 8px",
+                      fontWeight: "800",
+                      color: "#000000",
+                    }}
+                  >
+                    Employers Contribution (EPF &amp; ESIC)
+                  </td>
+                  <td
+                    style={{
+                      border: `2px solid ${border}`,
+                      padding: "5px 8px",
+                      textAlign: "right",
+                      fontWeight: "800",
+                      color: "#000000",
+                    }}
+                  >
+                    {fmt(p.employersContributionEPFESIC)}
+                  </td>
+                </tr>
+
+                {/* Net Amount Row */}
+                <tr>
+                  <td
+                    style={{
+                      border: `1px solid ${border}`,
+                      padding: "3px 8px",
+                      backgroundColor: "#ffffff",
+                    }}
+                  />
+                  <td
+                    style={{
+                      border: `1px solid ${border}`,
+                      padding: "3px 8px",
+                      backgroundColor: "#ffffff",
+                    }}
+                  />
+                  <td
+                    style={{
+                      background: "#ffffff",
+                      border: `2px solid ${border}`,
+                      padding: "8px 8px",
+                      fontWeight: "900",
+                      color: "#000000",
+                      letterSpacing: "0.5px",
+                      fontSize: "12px",
+                    }}
+                  >
+                    Net Amount (in bank remittances)
+                  </td>
+                  <td
+                    style={{
+                      background: "#ffffff",
+                      border: `2px solid ${border}`,
+                      padding: "8px 8px",
+                      textAlign: "right",
+                      fontWeight: "900",
+                      color: "#000000",
+                      fontSize: "13px",
+                    }}
+                  >
+                    {fmt(p.netAmount)}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+
+            {/* Amount in Words Banner */}
+            {p.amountInWords && (
+              <div
+                style={{
+                  background: "#f2f2f2",
+                  border: `1px solid ${border}`,
+                  padding: "7px 14px",
+                  marginBottom: "14px",
+                  fontSize: "11px",
+                }}
+              >
+                <span
+                  style={{
+                    color: "#000000",
+                    fontWeight: "900",
+                    marginRight: "6px",
+                  }}
                 >
-                  Leave Details (In Days)
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td className="border border-gray-300 px-2 py-0.5 font-bold">
-                  Total Number of Days
-                </td>
-                <td className="border border-gray-300 px-2 py-0.5 font-bold">
-                  {p.attendance.totalDays.toString()} Days
-                </td>
-                <td className="border border-gray-300 px-2 py-0.5 text-gray-600">
-                  Total Allow Leaves
-                </td>
-                <td className="border border-gray-300 px-2 py-0.5">
-                  : {p.leave.totalAllowLeaves.toString()} Days
-                </td>
-              </tr>
-              <tr>
-                <td className="border border-gray-300 px-2 py-0.5 pl-6">
-                  Present
-                </td>
-                <td className="border border-gray-300 px-2 py-0.5">
-                  {p.attendance.present.toString()} Days
-                </td>
-                <td className="border border-gray-300 px-2 py-0.5 text-gray-600">
-                  Used Leaves
-                </td>
-                <td className="border border-gray-300 px-2 py-0.5 font-bold">
-                  : {p.leave.usedLeaves.toString()} Days
-                </td>
-              </tr>
-              <tr>
-                <td className="border border-gray-300 px-2 py-0.5 pl-6">
-                  Utilised Leave
-                </td>
-                <td className="border border-gray-300 px-2 py-0.5">
-                  {p.attendance.utilisedLeave.toString()} Days
-                </td>
-                <td className="border border-gray-300 px-2 py-0.5 text-gray-600">
-                  Balance Leaves
-                </td>
-                <td className="border border-gray-300 px-2 py-0.5 font-bold">
-                  : {p.leave.balanceLeaves.toString()} Days
-                </td>
-              </tr>
-              <tr>
-                <td className="border border-gray-300 px-2 py-0.5 pl-6">
-                  Week Off
-                </td>
-                <td className="border border-gray-300 px-2 py-0.5">
-                  {p.attendance.weekOff.toString()} Days
-                </td>
-                <td className="border border-gray-300 px-2 py-0.5" />
-                <td className="border border-gray-300 px-2 py-0.5" />
-              </tr>
-              <tr>
-                <td className="border border-gray-300 px-2 py-0.5">Overtime</td>
-                <td className="border border-gray-300 px-2 py-0.5">
-                  {p.attendance.overtimeHrs}
-                </td>
-                <td className="border border-gray-300 px-2 py-0.5" />
-                <td className="border border-gray-300 px-2 py-0.5" />
-              </tr>
-              <tr>
-                <td className="border border-gray-300 px-2 py-0.5">
-                  Weekly Off Overtime
-                </td>
-                <td className="border border-gray-300 px-2 py-0.5">
-                  {p.attendance.weeklyOffOvertimeDays.toString()} Day
-                </td>
-                <td className="border border-gray-300 px-2 py-0.5" />
-                <td className="border border-gray-300 px-2 py-0.5" />
-              </tr>
-            </tbody>
-          </table>
-
-          {/* Earnings + Deductions Table */}
-          <table className="w-full border-collapse border border-gray-400 mb-4 text-xs">
-            <thead>
-              <tr>
-                <th className="border border-gray-400 px-2 py-1 text-left font-bold bg-gray-50 w-1/3">
-                  Earnings
-                </th>
-                <th className="border border-gray-400 px-2 py-1 text-right font-bold bg-gray-50 w-1/6">
-                  Amount
-                </th>
-                <th className="border border-gray-400 px-2 py-1 text-left font-bold bg-gray-50 w-1/3">
-                  Deductions
-                </th>
-                <th className="border border-gray-400 px-2 py-1 text-right font-bold bg-gray-50 w-1/6">
-                  Amount
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td className="border border-gray-300 px-2 py-0.5">
-                  Basic Pay
-                </td>
-                <td className="border border-gray-300 px-2 py-0.5 text-right">
-                  {fmt(p.earnings.basicPay)}
-                </td>
-                <td className="border border-gray-300 px-2 py-0.5">
-                  Employees ESI Deduction 0.75%
-                </td>
-                <td className="border border-gray-300 px-2 py-0.5 text-right">
-                  {fmt(p.deductions.employeeESIDeduction)}
-                </td>
-              </tr>
-              <tr>
-                <td className="border border-gray-300 px-2 py-0.5">Overtime</td>
-                <td className="border border-gray-300 px-2 py-0.5 text-right">
-                  {fmt(p.earnings.overtimeAmount)}
-                </td>
-                <td className="border border-gray-300 px-2 py-0.5">
-                  Professional Tax
-                </td>
-                <td className="border border-gray-300 px-2 py-0.5 text-right">
-                  {fmt(p.deductions.professionalTax)}
-                </td>
-              </tr>
-              <tr>
-                <td className="border border-gray-300 px-2 py-0.5">
-                  Weekly Off Overtime
-                </td>
-                <td className="border border-gray-300 px-2 py-0.5 text-right">
-                  {fmt(p.earnings.weeklyOffOvertimeAmount)}
-                </td>
-                <td className="border border-gray-300 px-2 py-0.5" />
-                <td className="border border-gray-300 px-2 py-0.5" />
-              </tr>
-              <tr>
-                <td className="border border-gray-300 px-2 py-0.5">
-                  Employer E.S.I @3.25%
-                </td>
-                <td className="border border-gray-300 px-2 py-0.5 text-right">
-                  {fmt(p.earnings.employerESI)}
-                </td>
-                <td className="border border-gray-300 px-2 py-0.5" />
-                <td className="border border-gray-300 px-2 py-0.5" />
-              </tr>
-              <tr className="font-bold bg-gray-50">
-                <td className="border border-gray-400 px-2 py-1">
-                  Total Earnings
-                </td>
-                <td className="border border-gray-400 px-2 py-1 text-right">
-                  {fmt(totalEarnings)}
-                </td>
-                <td className="border border-gray-400 px-2 py-1">
-                  Total Deductions
-                </td>
-                <td className="border border-gray-400 px-2 py-1 text-right">
-                  {fmt(totalDeductions)}
-                </td>
-              </tr>
-              <tr>
-                <td className="border border-gray-300 px-2 py-0.5" />
-                <td className="border border-gray-300 px-2 py-0.5" />
-                <td className="border border-gray-400 px-2 py-1 font-bold">
-                  Employers Contribution (EPF & ESIC)
-                </td>
-                <td className="border border-gray-400 px-2 py-1 text-right font-bold">
-                  {fmt(p.employersContributionEPFESIC)}
-                </td>
-              </tr>
-              <tr>
-                <td className="border border-gray-300 px-2 py-0.5" />
-                <td className="border border-gray-300 px-2 py-0.5" />
-                <td className="border border-gray-400 px-2 py-1 font-bold">
-                  Net Amount (in bank remittances)
-                </td>
-                <td className="border border-gray-400 px-2 py-1 text-right font-bold">
-                  {fmt(p.netAmount)}
-                </td>
-              </tr>
-            </tbody>
-          </table>
-
-          {/* Amount in Words */}
-          {p.amountInWords && (
-            <div className="mb-6 text-xs">
-              <span className="text-gray-600">Amount (in words): </span>
-              <span>{p.amountInWords}</span>
-            </div>
-          )}
-
-          {/* Signatory */}
-          {(p.signatoryName || p.signDate) && (
-            <div className="flex justify-end mt-4">
-              <div className="text-right text-xs">
-                {p.signatoryName && (
-                  <p className="font-bold uppercase">{p.signatoryName}</p>
-                )}
-                {p.signDate && (
-                  <p className="text-gray-500 text-xs">
-                    Digitally signed on {p.signDate}
-                  </p>
-                )}
+                  Amount (in words):
+                </span>
+                <span style={{ color: "#000000", fontWeight: "700" }}>
+                  {p.amountInWords}
+                </span>
               </div>
+            )}
+
+            {/* Computerised Document Notice */}
+            <div
+              style={{
+                textAlign: "center",
+                fontSize: "10px",
+                color: "#444444",
+                fontStyle: "italic",
+                marginBottom: "12px",
+                padding: "4px 0",
+                borderTop: "1px dashed #aaaaaa",
+                borderBottom: "1px dashed #aaaaaa",
+              }}
+            >
+              This is a computerised document and does not require a signature.
             </div>
-          )}
+
+            {/* Signatory Footer Strip (date only) */}
+            {p.signDate && (
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "flex-end",
+                  fontSize: "10px",
+                  color: "#555555",
+                }}
+              >
+                <span>
+                  Date:{" "}
+                  <strong style={{ color: "#000000" }}>{p.signDate}</strong>
+                </span>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

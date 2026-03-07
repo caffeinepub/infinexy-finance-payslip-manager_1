@@ -11,6 +11,8 @@ import Principal "mo:core/Principal";
 import MixinAuthorization "authorization/MixinAuthorization";
 import AccessControl "authorization/access-control";
 
+
+
 actor {
   let accessControlState = AccessControl.initState();
   include MixinAuthorization(accessControlState);
@@ -91,11 +93,31 @@ actor {
     caller == ownerId;
   };
 
+  // Helper function to auto-register the caller as user if not anonymous
+  // This can only be called from shared (update) functions, not query functions
+  func autoRegisterUser(caller : Principal) {
+    if (caller.toText() != "2vxsx-fae") {
+      let currentRole = AccessControl.getUserRole(accessControlState, caller);
+      // Only assign role if user is currently a guest (not yet registered)
+      if (currentRole == #guest) {
+        AccessControl.assignRole(accessControlState, caller, caller, #user);
+      };
+    };
+  };
+
+  // Helper to check if caller is authenticated (not anonymous)
+  func isAuthenticated(caller : Principal) : Bool {
+    caller.toText() != "2vxsx-fae";
+  };
+
   // User Profile Management Functions
   public query ({ caller }) func getCallerUserProfile() : async ?UserProfile {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can view profiles");
+    // Query functions cannot modify state, so we check authentication directly
+    if (not isAuthenticated(caller)) {
+      Runtime.trap("Unauthorized: Anonymous users cannot access profiles");
     };
+    // Allow any authenticated user to read their own profile
+    // They will be auto-registered on first write operation
     userProfiles.get(caller);
   };
 
@@ -107,7 +129,9 @@ actor {
   };
 
   public shared ({ caller }) func saveCallerUserProfile(profile : UserProfile) : async () {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+    // Auto-register user before permission check
+    autoRegisterUser(caller);
+    if (not AccessControl.hasPermission(accessControlState, caller, #user)) {
       Runtime.trap("Unauthorized: Only users can save profiles");
     };
     userProfiles.add(caller, profile);
@@ -141,7 +165,9 @@ actor {
     signatoryName : Text,
     signDate : Text
   ) : async () {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+    // Auto-register user before permission check
+    autoRegisterUser(caller);
+    if (not AccessControl.hasPermission(accessControlState, caller, #user)) {
       Runtime.trap("Unauthorized: Only users can create payslips");
     };
     let payslipId = generatePayslipId();
@@ -179,9 +205,12 @@ actor {
   };
 
   public query ({ caller }) func getMyPayslips() : async [PayslipSummary] {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can view payslips");
+    // Query functions cannot modify state, so check authentication directly
+    if (not isAuthenticated(caller)) {
+      Runtime.trap("Unauthorized: Anonymous users cannot access payslips");
     };
+    // Allow any authenticated user to read their own payslips
+    // They will be auto-registered on first write operation
     let iter = payslips.values().filter(
       func(p) { p.ownerId == caller }
     ).map(
@@ -198,8 +227,9 @@ actor {
   };
 
   public query ({ caller }) func getPayslip(payslipId : Nat) : async Payslip {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can view payslips");
+    // Query functions cannot modify state, so check authentication directly
+    if (not isAuthenticated(caller)) {
+      Runtime.trap("Unauthorized: Anonymous users cannot access payslips");
     };
     switch (payslips.get(payslipId)) {
       case (?p) {
@@ -239,7 +269,9 @@ actor {
     signatoryName : Text,
     signDate : Text
   ) : async () {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+    // Auto-register user before permission check
+    autoRegisterUser(caller);
+    if (not AccessControl.hasPermission(accessControlState, caller, #user)) {
       Runtime.trap("Unauthorized: Only users can update payslips");
     };
     switch (payslips.get(payslipId)) {
@@ -284,7 +316,9 @@ actor {
   };
 
   public shared ({ caller }) func deletePayslip(payslipId : Nat) : async () {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+    // Auto-register user before permission check
+    autoRegisterUser(caller);
+    if (not AccessControl.hasPermission(accessControlState, caller, #user)) {
       Runtime.trap("Unauthorized: Only users can delete payslips");
     };
     switch (payslips.get(payslipId)) {

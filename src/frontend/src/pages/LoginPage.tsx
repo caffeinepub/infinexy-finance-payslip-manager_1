@@ -63,21 +63,17 @@ export default function LoginPage() {
 
   if (showSetupName) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background px-4">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/10 via-background to-primary/5 px-4">
         <div className="w-full max-w-md space-y-6">
           <div className="text-center space-y-2">
-            <div className="flex justify-center">
-              <img
-                src="/assets/uploads/WhatsApp-Image-2026-02-27-at-11.18.04-AM-1.jpeg"
-                alt="Infinexy Finance"
-                className="h-24 w-auto object-contain"
-              />
-            </div>
-            <p className="text-muted-foreground text-sm">
+            <h1 className="text-2xl font-bold font-heading tracking-wide">
+              INFINEXY FINANCE
+            </h1>
+            <p className="text-primary/70 font-medium text-sm">
               401,402 Galav Chamber Dairy Den Sayajigunj Vadodara Gujarat-390005
             </p>
           </div>
-          <Card className="shadow-card">
+          <Card className="shadow-card border-primary/30">
             <CardHeader>
               <CardTitle className="text-lg text-center">
                 Setup Your Account
@@ -118,27 +114,20 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background px-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/10 via-background to-primary/5 px-4">
       <div className="w-full max-w-md space-y-6">
         <div className="text-center space-y-2">
-          <div className="flex justify-center">
-            <img
-              src="/assets/uploads/WhatsApp-Image-2026-02-27-at-11.18.04-AM-1.jpeg"
-              alt="Infinexy Finance"
-              className="h-24 w-auto object-contain"
-            />
-          </div>
-          <p className="text-muted-foreground text-sm">
-            Payslip Management System
-          </p>
-          <p className="text-muted-foreground text-xs">
+          <h1 className="text-2xl font-bold font-heading tracking-wide">
+            INFINEXY FINANCE
+          </h1>
+          <p className="text-primary/70 font-medium text-xs">
             401,402 Galav Chamber Dairy Den Sayajigunj
             <br />
             Vadodara Gujarat-390005
           </p>
         </div>
 
-        <Card className="shadow-card border-border">
+        <Card className="shadow-card border-primary/30">
           <CardHeader>
             <CardTitle className="text-center text-lg">
               Sign In to Continue
@@ -151,7 +140,7 @@ export default function LoginPage() {
             </p>
             <Button
               data-ocid="auth.login_button"
-              className="w-full"
+              className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
               onClick={login}
               disabled={isLoggingIn}
             >

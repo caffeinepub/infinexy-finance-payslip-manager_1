@@ -29,26 +29,32 @@ export default function Dashboard() {
   const [deletingId, setDeletingId] = useState<bigint | null>(null);
 
   useEffect(() => {
+    if (!actor || !identity || identity.getPrincipal().isAnonymous()) return;
+    let cancelled = false;
     const loadData = async () => {
-      if (!actor || !identity || identity.getPrincipal().isAnonymous()) return;
+      setLoading(true);
       setLoadError(null);
       try {
         const slips = await actor.getMyPayslips();
-        setPayslips(slips);
+        if (!cancelled) setPayslips(slips);
       } catch (err) {
+        if (cancelled) return;
         const msg = err instanceof Error ? err.message : String(err);
         setLoadError(msg.slice(0, 120));
         toast.error(`Failed to load payslips: ${msg.slice(0, 80)}`);
       }
       try {
         const profile = await actor.getCallerUserProfile();
-        if (profile?.name) setUserName(profile.name);
+        if (!cancelled && profile?.name) setUserName(profile.name);
       } catch {
         // Profile load failure is non-critical
       }
-      setLoading(false);
+      if (!cancelled) setLoading(false);
     };
     loadData();
+    return () => {
+      cancelled = true;
+    };
   }, [actor, identity]);
 
   const handleDelete = async (id: bigint) => {
@@ -73,21 +79,21 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="bg-card border-b border-border shadow-xs no-print">
+      <header className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground shadow-md no-print">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <img
-              src="/assets/uploads/WhatsApp-Image-2026-02-27-at-11.18.04-AM-1.jpeg"
-              alt="Infinexy Finance"
-              className="h-10 w-auto object-contain"
-            />
-            <p className="text-xs text-muted-foreground hidden sm:block">
-              401,402 Galav Chamber Sayajigunj Vadodara Gujarat-390005
-            </p>
+            <div>
+              <p className="text-base font-bold tracking-wide">
+                INFINEXY FINANCE
+              </p>
+              <p className="text-xs text-primary-foreground/70 hidden sm:block">
+                401,402 Galav Chamber Sayajigunj Vadodara Gujarat-390005
+              </p>
+            </div>
           </div>
           <div className="flex items-center gap-3">
             {userName && (
-              <span className="text-sm text-muted-foreground hidden sm:block">
+              <span className="text-sm text-primary-foreground/80 hidden sm:block">
                 Welcome, <strong>{userName}</strong>
               </span>
             )}
@@ -96,7 +102,7 @@ export default function Dashboard() {
               variant="outline"
               size="sm"
               onClick={handleLogout}
-              className="gap-2"
+              className="gap-2 border-primary-foreground/40 text-primary-foreground hover:bg-primary-foreground/10"
             >
               <LogOut className="h-4 w-4" />
               <span className="hidden sm:inline">Logout</span>
@@ -121,7 +127,7 @@ export default function Dashboard() {
             onClick={() => {
               window.location.hash = "/payslip/new";
             }}
-            className="gap-2"
+            className="gap-2 bg-accent text-accent-foreground hover:bg-accent/90 shadow-sm"
           >
             <Plus className="h-4 w-4" />
             New Payslip
@@ -201,13 +207,13 @@ export default function Dashboard() {
                 key={slip.payslipId.toString()}
                 data-ocid={`dashboard.payslip.item.${idx + 1}`}
               >
-                <Card className="shadow-card hover:shadow-md transition-shadow">
+                <Card className="shadow-card hover:shadow-md transition-shadow border-l-4 border-l-primary">
                   <CardHeader className="pb-3">
                     <div className="flex items-start justify-between gap-2">
                       <CardTitle className="text-base font-semibold text-foreground truncate">
                         {slip.employeeName || "Unknown Employee"}
                       </CardTitle>
-                      <Badge variant="secondary" className="shrink-0 text-xs">
+                      <Badge className="bg-primary/10 text-primary border-0 shrink-0 text-xs">
                         {slip.payPeriod.month} {slip.payPeriod.year}
                       </Badge>
                     </div>
@@ -217,7 +223,7 @@ export default function Dashboard() {
                       <p className="text-xs text-muted-foreground">
                         Net Amount
                       </p>
-                      <p className="text-xl font-bold text-foreground">
+                      <p className="text-xl font-bold text-accent">
                         ₹
                         {Number(slip.netAmount).toLocaleString("en-IN", {
                           minimumFractionDigits: 2,
@@ -230,7 +236,7 @@ export default function Dashboard() {
                         data-ocid={`dashboard.payslip.view_button.${idx + 1}`}
                         variant="default"
                         size="sm"
-                        className="flex-1 gap-1.5"
+                        className="flex-1 gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90"
                         onClick={() => {
                           window.location.hash = `/payslip/${slip.payslipId.toString()}`;
                         }}

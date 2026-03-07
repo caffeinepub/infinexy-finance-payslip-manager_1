@@ -1,13 +1,104 @@
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, Building2, Loader2, Save } from "lucide-react";
+import { ArrowLeft, Loader2, Save } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import type { Payslip } from "../backend.d";
 import { useActor } from "../hooks/useActor";
+
+// ---------------------------------------------------------------------------
+// Utility: convert a number to Indian-style words (handles paise)
+// ---------------------------------------------------------------------------
+const ones = [
+  "",
+  "One",
+  "Two",
+  "Three",
+  "Four",
+  "Five",
+  "Six",
+  "Seven",
+  "Eight",
+  "Nine",
+  "Ten",
+  "Eleven",
+  "Twelve",
+  "Thirteen",
+  "Fourteen",
+  "Fifteen",
+  "Sixteen",
+  "Seventeen",
+  "Eighteen",
+  "Nineteen",
+];
+const tens = [
+  "",
+  "",
+  "Twenty",
+  "Thirty",
+  "Forty",
+  "Fifty",
+  "Sixty",
+  "Seventy",
+  "Eighty",
+  "Ninety",
+];
+
+function numToWordsBelow100(n: number): string {
+  if (n < 20) return ones[n];
+  return tens[Math.floor(n / 10)] + (n % 10 !== 0 ? ` ${ones[n % 10]}` : "");
+}
+
+function numToWordsBelow1000(n: number): string {
+  if (n < 100) return numToWordsBelow100(n);
+  return `${ones[Math.floor(n / 100)]} Hundred${n % 100 !== 0 ? ` ${numToWordsBelow100(n % 100)}` : ""}`;
+}
+
+function numberToWords(amount: number): string {
+  if (Number.isNaN(amount) || amount < 0) return "";
+  const rupees = Math.floor(amount);
+  const paiseRaw = Math.round((amount - rupees) * 100);
+  const paise = paiseRaw > 99 ? 99 : paiseRaw;
+
+  if (rupees === 0 && paise === 0) return "INR Zero Only";
+
+  const parts: string[] = [];
+  let rem = rupees;
+
+  const crore = Math.floor(rem / 10000000);
+  rem %= 10000000;
+  const lakh = Math.floor(rem / 100000);
+  rem %= 100000;
+  const thousand = Math.floor(rem / 1000);
+  rem %= 1000;
+  const rest = rem;
+
+  if (crore > 0) parts.push(`${numToWordsBelow1000(crore)} Crore`);
+  if (lakh > 0) parts.push(`${numToWordsBelow1000(lakh)} Lakh`);
+  if (thousand > 0) parts.push(`${numToWordsBelow1000(thousand)} Thousand`);
+  if (rest > 0) parts.push(numToWordsBelow1000(rest));
+
+  let result = `INR ${parts.join(" ")}`;
+  if (paise > 0) {
+    result += ` and ${numToWordsBelow100(paise)} Paise`;
+  }
+  return `${result} Only`;
+}
+
+// Format current date-time as DD-MM-YYYY HH:MM:SS
+function getCurrentDateTime(): string {
+  const now = new Date();
+  const dd = String(now.getDate()).padStart(2, "0");
+  const mm = String(now.getMonth() + 1).padStart(2, "0");
+  const yyyy = now.getFullYear();
+  const hh = String(now.getHours()).padStart(2, "0");
+  const min = String(now.getMinutes()).padStart(2, "0");
+  const ss = String(now.getSeconds()).padStart(2, "0");
+  return `${dd}-${mm}-${yyyy} ${hh}:${min}:${ss}`;
+}
 
 interface Props {
   editId?: string;
@@ -103,13 +194,13 @@ const defaultForm: FormState = {
   employersContributionEPFESIC: "0",
   amountInWords: "",
   signatoryName: "",
-  signDate: "",
+  signDate: getCurrentDateTime(),
 };
 
 function SectionTitle({ title }: { title: string }) {
   return (
-    <div className="mt-6 mb-3">
-      <h3 className="text-sm font-semibold text-foreground uppercase tracking-wide border-b border-border pb-2">
+    <div className="mt-6 mb-3 pl-3 border-l-4 border-primary">
+      <h3 className="text-sm font-semibold text-primary uppercase tracking-wide">
         {title}
       </h3>
     </div>
@@ -141,10 +232,16 @@ export default function PayslipForm({ editId }: Props) {
   const [isLoading, setIsLoading] = useState(!!editId);
 
   useEffect(() => {
-    if (!editId || !actor) return;
+    if (!editId) {
+      setIsLoading(false);
+      return;
+    }
+    if (!actor) return; // wait until actor is ready
+    let cancelled = false;
     const load = async () => {
       try {
         const data: Payslip = await actor.getPayslip(BigInt(editId));
+        if (cancelled) return;
         setForm({
           employeeName: data.employeeName,
           employeeNumber: data.employeeNumber,
@@ -184,12 +281,15 @@ export default function PayslipForm({ editId }: Props) {
           signDate: data.signDate,
         });
       } catch {
-        toast.error("Failed to load payslip");
+        if (!cancelled) toast.error("Failed to load payslip");
       } finally {
-        setIsLoading(false);
+        if (!cancelled) setIsLoading(false);
       }
     };
     load();
+    return () => {
+      cancelled = true;
+    };
   }, [editId, actor]);
 
   const update =
@@ -212,6 +312,11 @@ export default function PayslipForm({ editId }: Props) {
   const epfEsic = Number.parseFloat(form.employersContributionEPFESIC) || 0;
   const netAmount = totalEarnings - totalDeductions;
 
+  // Auto-update Amount in Words whenever netAmount changes
+  useEffect(() => {
+    setForm((prev) => ({ ...prev, amountInWords: numberToWords(netAmount) }));
+  }, [netAmount]);
+
   const balanceLeaves =
     (Number.parseInt(form.totalAllowLeaves) || 0) -
     (Number.parseInt(form.usedLeaves) || 0);
@@ -223,13 +328,6 @@ export default function PayslipForm({ editId }: Props) {
     }
     if (!form.employeeName.trim()) {
       toast.error("Employee name is required");
-      return;
-    }
-
-    if (isFetching) {
-      toast.error(
-        "Still connecting to the network. Please wait a moment and try again.",
-      );
       return;
     }
 
@@ -358,18 +456,12 @@ export default function PayslipForm({ editId }: Props) {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="bg-card border-b border-border shadow-xs no-print">
+      <header className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground shadow-md no-print">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Building2 className="h-6 w-6 text-primary" />
-            <div>
-              <h1 className="text-base font-bold font-heading text-foreground">
-                INFINEXY FINANCE
-              </h1>
-              <p className="text-xs text-muted-foreground hidden sm:block">
-                Payslip Manager
-              </p>
-            </div>
+            <p className="text-xs text-primary-foreground/70 hidden sm:block">
+              Payslip Manager
+            </p>
           </div>
           <Button
             data-ocid="payslip_form.cancel_button"
@@ -378,7 +470,7 @@ export default function PayslipForm({ editId }: Props) {
             onClick={() => {
               window.location.hash = "/dashboard";
             }}
-            className="gap-2"
+            className="gap-2 border-primary-foreground/40 text-primary-foreground hover:bg-primary-foreground/10"
           >
             <ArrowLeft className="h-4 w-4" />
             Dashboard
@@ -388,7 +480,7 @@ export default function PayslipForm({ editId }: Props) {
 
       <main className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
         <div className="mb-6">
-          <h2 className="text-2xl font-bold font-heading text-foreground">
+          <h2 className="text-2xl font-bold font-heading text-primary">
             {editId ? "Edit Payslip" : "New Payslip"}
           </h2>
           <p className="text-muted-foreground text-sm mt-1">
@@ -609,7 +701,7 @@ export default function PayslipForm({ editId }: Props) {
                 <Label className="text-xs text-muted-foreground">
                   Balance Leaves (Auto)
                 </Label>
-                <div className="h-9 px-3 flex items-center bg-muted rounded-md text-sm font-medium text-foreground">
+                <div className="h-9 px-3 flex items-center bg-secondary rounded-md text-sm font-medium text-secondary-foreground">
                   {balanceLeaves < 0 ? 0 : balanceLeaves} Days
                 </div>
               </div>
@@ -660,7 +752,7 @@ export default function PayslipForm({ editId }: Props) {
                 <Label className="text-xs text-muted-foreground">
                   Total Earnings (Auto)
                 </Label>
-                <div className="h-9 px-3 flex items-center bg-muted rounded-md text-sm font-bold text-foreground">
+                <div className="h-9 px-3 flex items-center bg-primary/10 rounded-md text-sm font-bold text-primary">
                   ₹{totalEarnings.toFixed(2)}
                 </div>
               </div>
@@ -693,7 +785,7 @@ export default function PayslipForm({ editId }: Props) {
                 <Label className="text-xs text-muted-foreground">
                   Total Deductions (Auto)
                 </Label>
-                <div className="h-9 px-3 flex items-center bg-muted rounded-md text-sm font-bold text-foreground">
+                <div className="h-9 px-3 flex items-center bg-destructive/10 rounded-md text-sm font-bold text-destructive">
                   ₹{totalDeductions.toFixed(2)}
                 </div>
               </div>
@@ -717,7 +809,7 @@ export default function PayslipForm({ editId }: Props) {
                 <Label className="text-xs text-muted-foreground">
                   Net Amount in Bank (Auto)
                 </Label>
-                <div className="h-9 px-3 flex items-center bg-primary/10 rounded-md text-sm font-bold text-primary">
+                <div className="h-9 px-3 flex items-center bg-accent/15 rounded-md text-sm font-bold text-accent-foreground border border-accent/30">
                   ₹{netAmount.toFixed(2)}
                 </div>
               </div>
@@ -728,14 +820,15 @@ export default function PayslipForm({ editId }: Props) {
                 htmlFor="amtWords"
                 className="text-xs text-muted-foreground"
               >
-                Amount in Words
+                Amount in Words{" "}
+                <span className="text-primary font-medium">(Auto)</span>
               </Label>
               <Input
                 id="amtWords"
                 value={form.amountInWords}
                 onChange={update("amountInWords")}
-                placeholder="e.g. INR Twenty One Thousand Four Hundred Thirty Four and Twenty Four paise Only"
-                className="text-sm"
+                placeholder="Auto-generated from Net Amount"
+                className="text-sm bg-primary/5 font-medium"
               />
             </div>
 
@@ -751,13 +844,22 @@ export default function PayslipForm({ editId }: Props) {
                 onChange={update("signatoryName")}
                 placeholder="Name of signatory"
               />
-              <Field
-                label="Sign Date"
-                id="signDate"
-                value={form.signDate}
-                onChange={update("signDate")}
-                placeholder="e.g. 04-01-2026 10:55:34"
-              />
+              <div className="space-y-1.5">
+                <Label
+                  htmlFor="signDate"
+                  className="text-xs text-muted-foreground"
+                >
+                  Sign Date{" "}
+                  <span className="text-primary font-medium">(Auto)</span>
+                </Label>
+                <Input
+                  id="signDate"
+                  value={form.signDate}
+                  onChange={update("signDate")}
+                  placeholder="DD-MM-YYYY HH:MM:SS"
+                  className="h-9 text-sm bg-primary/5 font-medium"
+                />
+              </div>
             </div>
 
             {/* Actions */}
@@ -765,15 +867,10 @@ export default function PayslipForm({ editId }: Props) {
               <Button
                 data-ocid="payslip_form.submit_button"
                 onClick={handleSave}
-                disabled={isSaving || isFetching}
-                className="gap-2"
+                disabled={isSaving || !actor}
+                className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90"
               >
-                {isFetching ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Connecting...
-                  </>
-                ) : isSaving ? (
+                {isSaving ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin" />
                     Saving...
