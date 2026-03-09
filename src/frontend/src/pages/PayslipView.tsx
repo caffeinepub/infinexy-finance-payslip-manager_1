@@ -9,21 +9,28 @@ interface Props {
   id: string;
 }
 
-const BORDER = "1px solid #000";
-const BORDER2 = "2px solid #000";
-const LIGHT = "#f2f2f2";
-const TOTAL = "#e0e0e0";
+const B = "1px solid #000";
+const B2 = "2px solid #000";
+const LIGHT = "#f5f5f5";
 const WHITE = "#ffffff";
 
-const td: React.CSSProperties = {
-  border: BORDER,
-  padding: "4px 8px",
+const cell: React.CSSProperties = {
+  border: B,
+  padding: "5px 8px",
   color: "#000",
+  fontSize: "11px",
 };
 
-const tdBold: React.CSSProperties = {
-  ...td,
+const cellBold: React.CSSProperties = {
+  ...cell,
   fontWeight: 700,
+};
+
+const labelCell: React.CSSProperties = {
+  ...cellBold,
+  background: LIGHT,
+  width: "18%",
+  whiteSpace: "nowrap",
 };
 
 export default function PayslipView({ id }: Props) {
@@ -56,6 +63,7 @@ export default function PayslipView({ id }: Props) {
   if (loading) {
     return (
       <div
+        data-ocid="payslip_view.loading_state"
         className="min-h-screen flex items-center justify-center"
         style={{ background: "oklch(0.975 0.005 80)" }}
       >
@@ -75,6 +83,7 @@ export default function PayslipView({ id }: Props) {
   if (!payslip) {
     return (
       <div
+        data-ocid="payslip_view.error_state"
         className="min-h-screen flex items-center justify-center"
         style={{ background: "oklch(0.975 0.005 80)" }}
       >
@@ -99,52 +108,37 @@ export default function PayslipView({ id }: Props) {
   }
 
   const p = payslip;
-  const totalEarnings =
-    p.earnings.basicPay +
-    p.earnings.overtimeAmount +
-    p.earnings.weeklyOffOvertimeAmount +
-    p.earnings.employerESI;
-  const totalDeductions =
-    p.deductions.employeeESIDeduction + p.deductions.professionalTax;
-  const fmt = (n: number) => n.toFixed(2);
+  const fmt = (n: number) =>
+    n.toLocaleString("en-IN", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
 
-  const employeeInfoRows: [string, string, string, string][] = [
-    ["Employee Number", p.employeeNumber, "Tax Regime", p.taxRegime],
-    ["Function", p.functionRole, "Income Tax Number (PAN)", p.pan],
-    ["Designation", p.designation, "Universal Account Number (UAN)", p.uan],
-    ["Location", p.location, "PF Account Number", p.pfAccountNumber],
-    ["Bank Details", p.bankDetails, "ESI Number", p.esiNumber],
-    ["Date of Joining", p.dateOfJoining, "PR Account Number (PRAN)", p.pran],
+  // Earnings per row: only Actual Amount + Payable Amount (no arrear column)
+  const earningsRows: Array<{
+    label: string;
+    grossPM: number;
+    currentMonth: number;
+  }> = [
+    {
+      label: "Basic",
+      grossPM: p.earnings.basicGrossPM,
+      currentMonth: p.earnings.basicCurrentMonth,
+    },
+    {
+      label: "Mobile Allowance",
+      grossPM: p.earnings.mobileAllowanceGrossPM,
+      currentMonth: p.earnings.mobileAllowanceCurrentMonth,
+    },
+    {
+      label: "Incentive",
+      grossPM: p.earnings.statutoryBonusGrossPM,
+      currentMonth: p.earnings.statutoryBonusCurrentMonth,
+    },
   ];
 
-  const attendanceRows: [string, string, string, string][] = [
-    [
-      "Total Number of Days",
-      `${p.attendance.totalDays} Days`,
-      "Total Allow Leaves",
-      `${p.leave.totalAllowLeaves} Days`,
-    ],
-    [
-      "Present",
-      `${p.attendance.present} Days`,
-      "Used Leaves",
-      `${p.leave.usedLeaves} Days`,
-    ],
-    [
-      "Utilised Leave",
-      `${p.attendance.utilisedLeave} Days`,
-      "Balance Leaves",
-      `${p.leave.balanceLeaves} Days`,
-    ],
-    ["Week Off", `${p.attendance.weekOff} Days`, "", ""],
-    ["Overtime", p.attendance.overtimeHrs, "", ""],
-    [
-      "Weekly Off Overtime",
-      `${p.attendance.weeklyOffOvertimeDays} Day`,
-      "",
-      "",
-    ],
-  ];
+  const totalGrossPM = p.totalEarningsGrossPM;
+  const totalCurrentMonth = p.totalEarningsCurrentMonth;
 
   return (
     <div
@@ -161,7 +155,7 @@ export default function PayslipView({ id }: Props) {
         }}
       >
         <div
-          className="max-w-4xl mx-auto px-4 sm:px-6"
+          className="max-w-5xl mx-auto"
           style={{
             padding: "12px 24px",
             display: "flex",
@@ -213,15 +207,15 @@ export default function PayslipView({ id }: Props) {
       </div>
 
       {/* Payslip document */}
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
         <div
           id="payslip-document"
           style={{
             background: WHITE,
             color: "#000",
-            fontFamily: "Arial, Helvetica, sans-serif",
+            fontFamily: "'Arial', 'Helvetica', sans-serif",
             fontSize: "11px",
-            border: BORDER2,
+            border: B2,
             overflow: "hidden",
           }}
         >
@@ -229,292 +223,204 @@ export default function PayslipView({ id }: Props) {
           <div
             style={{
               background: WHITE,
-              padding: "16px 24px 10px",
+              padding: "16px 24px 12px",
               textAlign: "center",
-              borderBottom: BORDER2,
+              borderBottom: B2,
             }}
           >
-            <h1
+            <img
+              src="/assets/uploads/WhatsApp-Image-2026-02-27-at-11.18.04-AM-2-1.jpeg"
+              alt="Infinexy Finance Logo"
               style={{
-                color: "#000",
-                fontSize: "20px",
-                fontWeight: 900,
-                letterSpacing: "3px",
-                textTransform: "uppercase",
-                margin: "0 0 4px",
+                height: 70,
+                width: "auto",
+                objectFit: "contain",
+                display: "block",
+                margin: "0 auto 8px",
               }}
-            >
-              INFINEXY FINANCE
-            </h1>
+            />
             <p
               style={{
-                color: "#333",
+                color: "#444",
                 fontSize: "11px",
                 margin: 0,
-                letterSpacing: "0.4px",
+                letterSpacing: "0.3px",
               }}
             >
               401,402 Galav Chamber Dairy Den Sayajigunj Vadodara Gujarat-390005
             </p>
           </div>
 
-          {/* ── Pay Slip Title Band ── */}
+          {/* ── Pay Slip Title ── */}
           <div
             style={{
-              background: WHITE,
-              padding: "7px 24px",
+              background: LIGHT,
+              padding: "8px 24px",
               textAlign: "center",
-              borderBottom: BORDER,
+              borderBottom: B,
             }}
           >
-            <h2
+            <p
               style={{
                 color: "#000",
                 fontSize: "13px",
                 fontWeight: 800,
-                letterSpacing: "2px",
-                textTransform: "uppercase",
-                margin: "0 0 2px",
-              }}
-            >
-              PAY SLIP
-            </h2>
-            <p style={{ color: "#333", fontSize: "11px", margin: 0 }}>
-              for{" "}
-              <strong style={{ color: "#000" }}>
-                {p.payPeriod.month}-{p.payPeriod.year}
-              </strong>
-            </p>
-          </div>
-
-          {/* ── Employee Name Banner ── */}
-          <div
-            style={{
-              background: LIGHT,
-              borderBottom: BORDER,
-              padding: "8px 24px",
-              textAlign: "center",
-            }}
-          >
-            <h3
-              style={{
-                color: "#000",
-                fontSize: "13px",
-                fontWeight: 900,
-                letterSpacing: "2px",
+                letterSpacing: "1px",
                 textTransform: "uppercase",
                 margin: 0,
               }}
             >
-              {p.employeeName}
-            </h3>
+              Pay slip for the month of {p.payPeriod.month}-{p.payPeriod.year}
+            </p>
           </div>
 
           {/* ── Document body ── */}
-          <div style={{ padding: "14px 14px 18px" }}>
+          <div style={{ padding: "14px 16px 18px" }}>
             {/* Employee Info Table */}
             <table
               style={{
                 width: "100%",
                 borderCollapse: "collapse",
-                border: BORDER,
                 marginBottom: "12px",
-                fontSize: "11px",
               }}
             >
               <tbody>
-                {employeeInfoRows.map(([l1, v1, l2, v2], idx) => (
-                  <tr
-                    key={l1}
-                    style={{
-                      backgroundColor: idx % 2 === 0 ? WHITE : "#f7f7f7",
-                    }}
-                  >
-                    <td style={{ ...tdBold, width: "25%" }}>{l1}</td>
-                    <td style={{ ...tdBold, width: "25%" }}>: {v1}</td>
-                    <td style={{ ...tdBold, width: "25%" }}>{l2}</td>
-                    <td style={{ ...tdBold, width: "25%" }}>: {v2}</td>
-                  </tr>
-                ))}
+                {/* Row 1 */}
+                <tr>
+                  <td style={labelCell}>Employee Name</td>
+                  <td style={{ ...cellBold, width: "32%" }}>
+                    {p.employeeName}
+                  </td>
+                  <td style={labelCell}>PAN No.</td>
+                  <td style={{ ...cellBold, width: "32%" }}>{p.pan}</td>
+                </tr>
+                {/* Row 2 */}
+                <tr>
+                  <td style={labelCell}>Employee ID</td>
+                  <td style={cellBold}>{p.employeeId}</td>
+                  <td style={labelCell}>Aadhar Number</td>
+                  <td style={cellBold}>{p.pfAccountNumber}</td>
+                </tr>
+                {/* Row 3 */}
+                <tr>
+                  <td style={labelCell}>Designation</td>
+                  <td style={cellBold}>{p.designation}</td>
+                  <td style={labelCell}>Location</td>
+                  <td style={cellBold}>{p.location}</td>
+                </tr>
+                {/* Row 4 */}
+                <tr>
+                  <td style={labelCell}>Business Unit</td>
+                  <td style={cellBold}>{p.businessUnit}</td>
+                  <td style={labelCell}>Date of Birth</td>
+                  <td style={cellBold}>{p.dateOfBirth}</td>
+                </tr>
+                {/* Row 5 */}
+                <tr>
+                  <td style={labelCell}>Date of Joining</td>
+                  <td style={cellBold}>{p.dateOfJoining}</td>
+                  <td style={cell} />
+                  <td style={cell} />
+                </tr>
+                {/* Row 6 – Attendance */}
+                <tr>
+                  <td style={labelCell}>Days Paid</td>
+                  <td style={cellBold}>{p.daysPaid.toString()}</td>
+                  <td style={labelCell}>LOP Days</td>
+                  <td style={cellBold}>{p.lopDays.toString()}</td>
+                </tr>
+                <tr>
+                  <td style={labelCell}>Arrear Days</td>
+                  <td style={cellBold}>{p.arrearDays.toString()}</td>
+                  <td style={cell} />
+                  <td style={cell} />
+                </tr>
               </tbody>
             </table>
 
-            {/* Attendance + Leave Table */}
+            {/* Salary Details header */}
+            <div
+              style={{
+                background: "#000",
+                color: WHITE,
+                fontWeight: 800,
+                fontSize: "12px",
+                letterSpacing: "1px",
+                padding: "6px 10px",
+                marginBottom: "0",
+                textTransform: "uppercase",
+              }}
+            >
+              Salary Details
+            </div>
+
+            {/* Earnings Table — 3 columns: Particulars | Actual Amount | Payable Amount */}
             <table
               style={{
                 width: "100%",
                 borderCollapse: "collapse",
-                border: BORDER,
-                marginBottom: "12px",
-                fontSize: "11px",
+                marginBottom: "0",
               }}
             >
               <thead>
-                <tr>
+                <tr style={{ background: LIGHT }}>
                   <th
                     style={{
-                      ...tdBold,
-                      width: "33%",
-                      background: WHITE,
+                      ...cellBold,
                       textAlign: "left",
-                      fontWeight: 800,
-                      padding: "6px 8px",
+                      width: "40%",
+                      background: LIGHT,
                     }}
                   >
-                    Attendance Details
+                    Particulars
                   </th>
                   <th
                     style={{
-                      ...tdBold,
-                      width: "17%",
-                      background: WHITE,
-                      textAlign: "left",
-                      fontWeight: 800,
-                      padding: "6px 8px",
+                      ...cellBold,
+                      textAlign: "right",
+                      width: "30%",
+                      background: LIGHT,
                     }}
                   >
-                    Value
+                    Actual Amount
                   </th>
                   <th
-                    colSpan={2}
                     style={{
-                      ...tdBold,
-                      background: WHITE,
-                      textAlign: "left",
-                      fontWeight: 800,
-                      padding: "6px 8px",
+                      ...cellBold,
+                      textAlign: "right",
+                      width: "30%",
+                      background: LIGHT,
                     }}
                   >
-                    Leave Details (In Days)
+                    Payable Amount
                   </th>
                 </tr>
               </thead>
               <tbody>
-                {attendanceRows.map(([a, b, c, d], idx) => (
+                {earningsRows.map((row, idx) => (
                   <tr
-                    key={a || String(idx)}
-                    style={{
-                      backgroundColor: idx % 2 === 0 ? WHITE : "#f7f7f7",
-                    }}
+                    key={row.label}
+                    style={{ background: idx % 2 === 0 ? WHITE : "#fafafa" }}
                   >
-                    <td style={tdBold}>{a}</td>
-                    <td style={tdBold}>{b}</td>
-                    <td style={{ ...td, fontWeight: 600, color: "#333" }}>
-                      {c}
+                    <td style={cell}>{row.label}</td>
+                    <td style={{ ...cell, textAlign: "right" }}>
+                      {fmt(row.grossPM)}
                     </td>
-                    <td style={tdBold}>{d}</td>
+                    <td
+                      style={{ ...cell, textAlign: "right", fontWeight: 700 }}
+                    >
+                      {fmt(row.currentMonth)}
+                    </td>
                   </tr>
                 ))}
-              </tbody>
-            </table>
-
-            {/* Earnings + Deductions Table */}
-            <table
-              style={{
-                width: "100%",
-                borderCollapse: "collapse",
-                border: BORDER,
-                marginBottom: "12px",
-                fontSize: "11px",
-              }}
-            >
-              <thead>
-                <tr>
-                  <th
-                    style={{
-                      ...tdBold,
-                      width: "33%",
-                      background: WHITE,
-                      textAlign: "left",
-                      fontWeight: 800,
-                      padding: "6px 8px",
-                    }}
-                  >
-                    Earnings
-                  </th>
-                  <th
-                    style={{
-                      ...tdBold,
-                      width: "17%",
-                      background: WHITE,
-                      textAlign: "right",
-                      fontWeight: 800,
-                      padding: "6px 8px",
-                    }}
-                  >
-                    Amount
-                  </th>
-                  <th
-                    style={{
-                      ...tdBold,
-                      width: "33%",
-                      background: WHITE,
-                      textAlign: "left",
-                      fontWeight: 800,
-                      padding: "6px 8px",
-                    }}
-                  >
-                    Deductions
-                  </th>
-                  <th
-                    style={{
-                      ...tdBold,
-                      width: "17%",
-                      background: WHITE,
-                      textAlign: "right",
-                      fontWeight: 800,
-                      padding: "6px 8px",
-                    }}
-                  >
-                    Amount
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr style={{ backgroundColor: WHITE }}>
-                  <td style={td}>Basic Pay</td>
-                  <td style={{ ...td, textAlign: "right", fontWeight: 800 }}>
-                    {fmt(p.earnings.basicPay)}
-                  </td>
-                  <td style={td}>Employees ESI Deduction 0.75%</td>
-                  <td style={{ ...td, textAlign: "right", fontWeight: 800 }}>
-                    {fmt(p.deductions.employeeESIDeduction)}
-                  </td>
-                </tr>
-                <tr style={{ backgroundColor: "#f7f7f7" }}>
-                  <td style={td}>Overtime</td>
-                  <td style={{ ...td, textAlign: "right", fontWeight: 800 }}>
-                    {fmt(p.earnings.overtimeAmount)}
-                  </td>
-                  <td style={td}>Professional Tax</td>
-                  <td style={{ ...td, textAlign: "right", fontWeight: 800 }}>
-                    {fmt(p.deductions.professionalTax)}
-                  </td>
-                </tr>
-                <tr style={{ backgroundColor: WHITE }}>
-                  <td style={td}>Weekly Off Overtime</td>
-                  <td style={{ ...td, textAlign: "right", fontWeight: 800 }}>
-                    {fmt(p.earnings.weeklyOffOvertimeAmount)}
-                  </td>
-                  <td style={td} />
-                  <td style={td} />
-                </tr>
-                <tr style={{ backgroundColor: "#f7f7f7" }}>
-                  <td style={td}>Employer E.S.I @3.25%</td>
-                  <td style={{ ...td, textAlign: "right", fontWeight: 800 }}>
-                    {fmt(p.earnings.employerESI)}
-                  </td>
-                  <td style={td} />
-                  <td style={td} />
-                </tr>
-
-                {/* Totals row */}
-                <tr style={{ backgroundColor: TOTAL }}>
+                {/* Earnings Total row */}
+                <tr style={{ background: "#e8e8e8" }}>
                   <td
                     style={{
-                      border: BORDER2,
-                      padding: "5px 8px",
+                      border: B2,
+                      padding: "6px 8px",
                       fontWeight: 900,
+                      fontSize: "11px",
                       color: "#000",
                     }}
                   >
@@ -522,20 +428,125 @@ export default function PayslipView({ id }: Props) {
                   </td>
                   <td
                     style={{
-                      border: BORDER2,
-                      padding: "5px 8px",
+                      border: B2,
+                      padding: "6px 8px",
                       textAlign: "right",
                       fontWeight: 900,
-                      color: "#000",
+                      fontSize: "11px",
                     }}
                   >
-                    {fmt(totalEarnings)}
+                    {fmt(totalGrossPM)}
                   </td>
                   <td
                     style={{
-                      border: BORDER2,
-                      padding: "5px 8px",
+                      border: B2,
+                      padding: "6px 8px",
+                      textAlign: "right",
                       fontWeight: 900,
+                      fontSize: "11px",
+                    }}
+                  >
+                    {fmt(totalCurrentMonth)}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+
+            {/* Net Payable row */}
+            <table
+              style={{
+                width: "100%",
+                borderCollapse: "collapse",
+                marginBottom: "0",
+              }}
+            >
+              <tbody>
+                <tr style={{ background: WHITE }}>
+                  <td
+                    colSpan={3}
+                    style={{
+                      border: B2,
+                      padding: "8px 10px",
+                      fontWeight: 900,
+                      fontSize: "12px",
+                      color: "#000",
+                      letterSpacing: "0.5px",
+                    }}
+                  >
+                    Net Payable{" "}
+                    <span style={{ fontSize: "14px" }}>
+                      ₹{fmt(p.netPayable)}
+                    </span>
+                    {p.amountInWords && (
+                      <span
+                        style={{
+                          marginLeft: "16px",
+                          fontWeight: 700,
+                          fontSize: "11px",
+                          color: "#333",
+                        }}
+                      >
+                        {p.amountInWords}
+                      </span>
+                    )}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+
+            {/* Deductions Table */}
+            <table
+              style={{
+                width: "100%",
+                borderCollapse: "collapse",
+                marginTop: "10px",
+                marginBottom: "10px",
+              }}
+            >
+              <thead>
+                <tr style={{ background: LIGHT }}>
+                  <th
+                    style={{
+                      ...cellBold,
+                      textAlign: "left",
+                      width: "70%",
+                      background: LIGHT,
+                    }}
+                  >
+                    Deductions – Particulars
+                  </th>
+                  <th
+                    style={{
+                      ...cellBold,
+                      textAlign: "right",
+                      width: "30%",
+                      background: LIGHT,
+                    }}
+                  >
+                    Amount
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr style={{ background: WHITE }}>
+                  <td style={cell}>Insurance</td>
+                  <td style={{ ...cell, textAlign: "right" }}>
+                    {fmt(p.deductions.providentFund)}
+                  </td>
+                </tr>
+                <tr style={{ background: "#fafafa" }}>
+                  <td style={cell}>Profession Tax</td>
+                  <td style={{ ...cell, textAlign: "right" }}>
+                    {fmt(p.deductions.professionTax)}
+                  </td>
+                </tr>
+                <tr style={{ background: "#e8e8e8" }}>
+                  <td
+                    style={{
+                      border: B2,
+                      padding: "6px 8px",
+                      fontWeight: 900,
+                      fontSize: "11px",
                       color: "#000",
                     }}
                   >
@@ -543,129 +554,77 @@ export default function PayslipView({ id }: Props) {
                   </td>
                   <td
                     style={{
-                      border: BORDER2,
-                      padding: "5px 8px",
+                      border: B2,
+                      padding: "6px 8px",
                       textAlign: "right",
                       fontWeight: 900,
+                      fontSize: "11px",
                       color: "#000",
                     }}
                   >
-                    {fmt(totalDeductions)}
-                  </td>
-                </tr>
-
-                {/* Employers contribution row */}
-                <tr style={{ backgroundColor: "#ebebeb" }}>
-                  <td style={{ border: BORDER, padding: "3px 8px" }} />
-                  <td style={{ border: BORDER, padding: "3px 8px" }} />
-                  <td
-                    style={{
-                      border: BORDER2,
-                      padding: "5px 8px",
-                      fontWeight: 800,
-                      color: "#000",
-                    }}
-                  >
-                    Employers Contribution (EPF &amp; ESIC)
-                  </td>
-                  <td
-                    style={{
-                      border: BORDER2,
-                      padding: "5px 8px",
-                      textAlign: "right",
-                      fontWeight: 800,
-                      color: "#000",
-                    }}
-                  >
-                    {fmt(p.employersContributionEPFESIC)}
-                  </td>
-                </tr>
-
-                {/* Net Amount row */}
-                <tr>
-                  <td
-                    style={{
-                      border: BORDER,
-                      padding: "3px 8px",
-                      backgroundColor: WHITE,
-                    }}
-                  />
-                  <td
-                    style={{
-                      border: BORDER,
-                      padding: "3px 8px",
-                      backgroundColor: WHITE,
-                    }}
-                  />
-                  <td
-                    style={{
-                      background: WHITE,
-                      border: BORDER2,
-                      padding: "8px 8px",
-                      fontWeight: 900,
-                      color: "#000",
-                      letterSpacing: "0.5px",
-                      fontSize: "12px",
-                    }}
-                  >
-                    Net Amount (in bank remittances)
-                  </td>
-                  <td
-                    style={{
-                      background: WHITE,
-                      border: BORDER2,
-                      padding: "8px 8px",
-                      textAlign: "right",
-                      fontWeight: 900,
-                      color: "#000",
-                      fontSize: "13px",
-                    }}
-                  >
-                    {fmt(p.netAmount)}
+                    {fmt(p.totalDeductions)}
                   </td>
                 </tr>
               </tbody>
             </table>
 
-            {/* Amount in Words */}
-            {p.amountInWords && (
-              <div
-                style={{
-                  background: LIGHT,
-                  border: BORDER,
-                  padding: "7px 14px",
-                  marginBottom: "14px",
-                  fontSize: "11px",
-                }}
-              >
-                <span
-                  style={{ color: "#000", fontWeight: 900, marginRight: 6 }}
-                >
-                  Amount (in words):
-                </span>
-                <span style={{ color: "#000", fontWeight: 700 }}>
-                  {p.amountInWords}
-                </span>
-              </div>
-            )}
+            {/* Payment Details */}
+            <table
+              style={{
+                width: "100%",
+                borderCollapse: "collapse",
+                marginTop: "10px",
+                marginBottom: "14px",
+              }}
+            >
+              <thead>
+                <tr style={{ background: LIGHT }}>
+                  <th
+                    colSpan={4}
+                    style={{
+                      ...cellBold,
+                      textAlign: "left",
+                      background: LIGHT,
+                    }}
+                  >
+                    Payment Details
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td style={labelCell}>Payment Mode</td>
+                  <td style={{ ...cell, width: "32%" }}>{p.paymentMode}</td>
+                  <td style={labelCell}>Bank Name</td>
+                  <td style={{ ...cell, width: "32%" }}>{p.bankName}</td>
+                </tr>
+                <tr>
+                  <td style={labelCell}>Account Number</td>
+                  <td style={cell}>{p.accountNumber}</td>
+                  <td style={labelCell}>IFSC Code</td>
+                  <td style={cell}>{p.ifscCode}</td>
+                </tr>
+              </tbody>
+            </table>
 
-            {/* Computerised notice */}
+            {/* Footer notice */}
             <div
               style={{
                 textAlign: "center",
                 fontSize: "10px",
-                color: "#444",
+                color: "#555",
                 fontStyle: "italic",
-                marginBottom: "12px",
-                padding: "4px 0",
-                borderTop: "1px dashed #aaa",
-                borderBottom: "1px dashed #aaa",
+                padding: "6px 0 4px",
+                borderTop: "1px dashed #bbb",
+                borderBottom: "1px dashed #bbb",
+                marginBottom: "10px",
               }}
             >
-              This is a computerised document and does not require a signature.
+              This is a computer generated payslip hence does not require any
+              signature.
             </div>
 
-            {/* Date footer */}
+            {/* Sign Date */}
             {p.signDate && (
               <div
                 style={{

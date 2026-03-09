@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, LogIn, ShieldCheck, User } from "lucide-react";
+import { Loader2, LogIn, User } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { navigate } from "../App";
@@ -67,27 +67,12 @@ export default function LoginPage() {
       <div className="flex-1 flex flex-col items-center justify-center px-4 py-16">
         {/* Company identity */}
         <div className="mb-10 text-center select-none">
-          <div className="flex items-center justify-center gap-2 mb-4">
-            <div
-              className="flex items-center justify-center"
-              style={{
-                width: 44,
-                height: 44,
-                background: "oklch(0.28 0.08 250)",
-                borderRadius: 6,
-              }}
-            >
-              <ShieldCheck size={22} style={{ color: "oklch(0.98 0 0)" }} />
-            </div>
-            <h1
-              className="font-heading font-black tracking-widest text-2xl"
-              style={{
-                color: "oklch(0.18 0.06 250)",
-                letterSpacing: "0.12em",
-              }}
-            >
-              INFINEXY FINANCE
-            </h1>
+          <div className="flex flex-col items-center gap-3 mb-2">
+            <img
+              src="/assets/uploads/WhatsApp-Image-2026-02-27-at-11.18.04-AM-2-1.jpeg"
+              alt="Infinexy Finance Logo"
+              style={{ height: 90, width: "auto", objectFit: "contain" }}
+            />
           </div>
           <p
             className="text-xs font-medium"

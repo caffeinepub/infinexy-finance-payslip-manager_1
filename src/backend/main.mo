@@ -4,7 +4,6 @@ import Float "mo:core/Float";
 import Nat "mo:core/Nat";
 import Array "mo:core/Array";
 import Runtime "mo:core/Runtime";
-import Order "mo:core/Order";
 import Iter "mo:core/Iter";
 import Time "mo:core/Time";
 import Principal "mo:core/Principal";
@@ -22,61 +21,74 @@ actor {
   };
 
   type PayPeriod = { month : Text; year : Text };
-  type Attendance = { totalDays : Nat; present : Nat; utilisedLeave : Nat; weekOff : Nat; overtimeHrs : Text; weeklyOffOvertimeDays : Nat };
-  type Leave = { totalAllowLeaves : Nat; usedLeaves : Nat; balanceLeaves : Nat };
-  type Earnings = { basicPay : Float; overtimeAmount : Float; weeklyOffOvertimeAmount : Float; employerESI : Float };
-  type Deductions = { employeeESIDeduction : Float; professionalTax : Float };
+
+  type Earnings = {
+    basicGrossPM : Float;
+    basicCurrentMonth : Float;
+    basicArrear : Float;
+
+    hraGrossPM : Float;
+    hraCurrentMonth : Float;
+    hraArrear : Float;
+
+    specialAllowanceGrossPM : Float;
+    specialAllowanceCurrentMonth : Float;
+    specialAllowanceArrear : Float;
+
+    mobileAllowanceGrossPM : Float;
+    mobileAllowanceCurrentMonth : Float;
+    mobileAllowanceArrear : Float;
+
+    statutoryBonusGrossPM : Float;
+    statutoryBonusCurrentMonth : Float;
+    statutoryBonusArrear : Float;
+  };
+
+  type Deductions = {
+    providentFund : Float;
+    professionTax : Float;
+  };
+
   type PayslipSummary = {
     payslipId : Nat;
     employeeName : Text;
     payPeriod : PayPeriod;
-    netAmount : Float;
+    netPayable : Float;
   };
 
-  type Payslip = {
+  public type Payslip = {
     payslipId : Nat;
     ownerId : Principal;
     payPeriod : PayPeriod;
     employeeName : Text;
-    employeeNumber : Text;
-    functionRole : Text;
+    employeeId : Text;
     designation : Text;
+    subFunction : Text;
+    grade : Text;
+    businessUnit : Text;
     location : Text;
-    bankDetails : Text;
     dateOfJoining : Text;
-    taxRegime : Text;
+    dateOfBirth : Text;
     pan : Text;
-    uan : Text;
     pfAccountNumber : Text;
-    esiNumber : Text;
-    pran : Text;
-    attendance : Attendance;
-    leave : Leave;
+    uan : Text;
+    daysPaid : Nat;
+    lopDays : Nat;
+    arrearDays : Nat;
     earnings : Earnings;
     deductions : Deductions;
-    totalEarnings : Float;
+    totalEarningsGrossPM : Float;
+    totalEarningsCurrentMonth : Float;
+    totalEarningsArrear : Float;
     totalDeductions : Float;
-    employersContributionEPFESIC : Float;
-    netAmount : Float;
+    netPayable : Float;
     amountInWords : Text;
-    signatoryName : Text;
+    paymentMode : Text;
+    accountNumber : Text;
+    bankName : Text;
+    ifscCode : Text;
     signDate : Text;
     createdAt : Int;
-  };
-
-  module PayslipSummary {
-    public func compare(p1 : PayslipSummary, p2 : PayslipSummary) : Order.Order {
-      switch (Text.compare(p1.employeeName, p2.employeeName)) {
-        case (#equal) { Nat.compare(p1.payslipId, p2.payslipId) };
-        case (order) { order };
-      };
-    };
-  };
-
-  module Payslip {
-    public func compareByNetAmount(p1 : Payslip, p2 : Payslip) : Order.Order {
-      Float.compare(p1.netAmount, p2.netAmount);
-    };
   };
 
   let userProfiles = Map.empty<Principal, UserProfile>();
@@ -93,31 +105,20 @@ actor {
     caller == ownerId;
   };
 
-  // Helper function to auto-register the caller as user if not anonymous
-  // This can only be called from shared (update) functions, not query functions
   func autoRegisterUser(caller : Principal) {
     if (caller.toText() != "2vxsx-fae") {
       let currentRole = AccessControl.getUserRole(accessControlState, caller);
-      // Only assign role if user is currently a guest (not yet registered)
       if (currentRole == #guest) {
         AccessControl.assignRole(accessControlState, caller, caller, #user);
       };
     };
   };
 
-  // Helper to check if caller is authenticated (not anonymous)
-  func isAuthenticated(caller : Principal) : Bool {
-    caller.toText() != "2vxsx-fae";
-  };
-
-  // User Profile Management Functions
   public query ({ caller }) func getCallerUserProfile() : async ?UserProfile {
-    // Query functions cannot modify state, so we check authentication directly
-    if (not isAuthenticated(caller)) {
-      Runtime.trap("Unauthorized: Anonymous users cannot access profiles");
+    autoRegisterUser(caller);
+    if (not AccessControl.hasPermission(accessControlState, caller, #user)) {
+      Runtime.trap("Unauthorized: Only users can access profiles");
     };
-    // Allow any authenticated user to read their own profile
-    // They will be auto-registered on first write operation
     userProfiles.get(caller);
   };
 
@@ -129,7 +130,6 @@ actor {
   };
 
   public shared ({ caller }) func saveCallerUserProfile(profile : UserProfile) : async () {
-    // Auto-register user before permission check
     autoRegisterUser(caller);
     if (not AccessControl.hasPermission(accessControlState, caller, #user)) {
       Runtime.trap("Unauthorized: Only users can save profiles");
@@ -137,35 +137,37 @@ actor {
     userProfiles.add(caller, profile);
   };
 
-  // Payslip Management Functions
   public shared ({ caller }) func createPayslip(
     payPeriod : PayPeriod,
     employeeName : Text,
-    employeeNumber : Text,
-    functionRole : Text,
+    employeeId : Text,
     designation : Text,
+    subFunction : Text,
+    grade : Text,
+    businessUnit : Text,
     location : Text,
-    bankDetails : Text,
     dateOfJoining : Text,
-    taxRegime : Text,
+    dateOfBirth : Text,
     pan : Text,
-    uan : Text,
     pfAccountNumber : Text,
-    esiNumber : Text,
-    pran : Text,
-    attendance : Attendance,
-    leave : Leave,
+    uan : Text,
+    daysPaid : Nat,
+    lopDays : Nat,
+    arrearDays : Nat,
     earnings : Earnings,
     deductions : Deductions,
-    totalEarnings : Float,
+    totalEarningsGrossPM : Float,
+    totalEarningsCurrentMonth : Float,
+    totalEarningsArrear : Float,
     totalDeductions : Float,
-    employersContributionEPFESIC : Float,
-    netAmount : Float,
+    netPayable : Float,
     amountInWords : Text,
-    signatoryName : Text,
+    paymentMode : Text,
+    accountNumber : Text,
+    bankName : Text,
+    ifscCode : Text,
     signDate : Text
   ) : async () {
-    // Auto-register user before permission check
     autoRegisterUser(caller);
     if (not AccessControl.hasPermission(accessControlState, caller, #user)) {
       Runtime.trap("Unauthorized: Only users can create payslips");
@@ -176,28 +178,32 @@ actor {
       ownerId = caller;
       payPeriod;
       employeeName;
-      employeeNumber;
-      functionRole;
+      employeeId;
       designation;
+      subFunction;
+      grade;
+      businessUnit;
       location;
-      bankDetails;
       dateOfJoining;
-      taxRegime;
+      dateOfBirth;
       pan;
-      uan;
       pfAccountNumber;
-      esiNumber;
-      pran;
-      attendance;
-      leave;
+      uan;
+      daysPaid;
+      lopDays;
+      arrearDays;
       earnings;
       deductions;
-      totalEarnings;
+      totalEarningsGrossPM;
+      totalEarningsCurrentMonth;
+      totalEarningsArrear;
       totalDeductions;
-      employersContributionEPFESIC;
-      netAmount;
+      netPayable;
       amountInWords;
-      signatoryName;
+      paymentMode;
+      accountNumber;
+      bankName;
+      ifscCode;
       signDate;
       createdAt = Time.now();
     };
@@ -205,12 +211,10 @@ actor {
   };
 
   public query ({ caller }) func getMyPayslips() : async [PayslipSummary] {
-    // Query functions cannot modify state, so check authentication directly
-    if (not isAuthenticated(caller)) {
-      Runtime.trap("Unauthorized: Anonymous users cannot access payslips");
+    autoRegisterUser(caller);
+    if (not AccessControl.hasPermission(accessControlState, caller, #user)) {
+      Runtime.trap("Unauthorized: Only users can access payslips");
     };
-    // Allow any authenticated user to read their own payslips
-    // They will be auto-registered on first write operation
     let iter = payslips.values().filter(
       func(p) { p.ownerId == caller }
     ).map(
@@ -219,23 +223,24 @@ actor {
           payslipId = p.payslipId;
           employeeName = p.employeeName;
           payPeriod = p.payPeriod;
-          netAmount = p.netAmount;
+          netPayable = p.netPayable;
         };
       }
     );
-    iter.toArray().sort();
+    iter.toArray();
   };
 
   public query ({ caller }) func getPayslip(payslipId : Nat) : async Payslip {
-    // Query functions cannot modify state, so check authentication directly
-    if (not isAuthenticated(caller)) {
-      Runtime.trap("Unauthorized: Anonymous users cannot access payslips");
+    autoRegisterUser(caller);
+    if (not AccessControl.hasPermission(accessControlState, caller, #user)) {
+      Runtime.trap("Unauthorized: Only users can access payslips");
     };
     switch (payslips.get(payslipId)) {
       case (?p) {
-        if (isOwner(caller, p.ownerId)) { p } else {
+        if (not isOwner(caller, p.ownerId) and not AccessControl.isAdmin(accessControlState, caller)) {
           Runtime.trap("Unauthorized: You do not have access to this payslip");
         };
+        p;
       };
       case (null) { Runtime.trap("Payslip not found") };
     };
@@ -245,38 +250,41 @@ actor {
     payslipId : Nat,
     payPeriod : PayPeriod,
     employeeName : Text,
-    employeeNumber : Text,
-    functionRole : Text,
+    employeeId : Text,
     designation : Text,
+    subFunction : Text,
+    grade : Text,
+    businessUnit : Text,
     location : Text,
-    bankDetails : Text,
     dateOfJoining : Text,
-    taxRegime : Text,
+    dateOfBirth : Text,
     pan : Text,
-    uan : Text,
     pfAccountNumber : Text,
-    esiNumber : Text,
-    pran : Text,
-    attendance : Attendance,
-    leave : Leave,
+    uan : Text,
+    daysPaid : Nat,
+    lopDays : Nat,
+    arrearDays : Nat,
     earnings : Earnings,
     deductions : Deductions,
-    totalEarnings : Float,
+    totalEarningsGrossPM : Float,
+    totalEarningsCurrentMonth : Float,
+    totalEarningsArrear : Float,
     totalDeductions : Float,
-    employersContributionEPFESIC : Float,
-    netAmount : Float,
+    netPayable : Float,
     amountInWords : Text,
-    signatoryName : Text,
+    paymentMode : Text,
+    accountNumber : Text,
+    bankName : Text,
+    ifscCode : Text,
     signDate : Text
   ) : async () {
-    // Auto-register user before permission check
     autoRegisterUser(caller);
     if (not AccessControl.hasPermission(accessControlState, caller, #user)) {
       Runtime.trap("Unauthorized: Only users can update payslips");
     };
     switch (payslips.get(payslipId)) {
       case (?existingPayslip) {
-        if (not isOwner(caller, existingPayslip.ownerId)) {
+        if (not isOwner(caller, existingPayslip.ownerId) and not AccessControl.isAdmin(accessControlState, caller)) {
           Runtime.trap("Unauthorized: You cannot update this payslip");
         };
         let updatedPayslip : Payslip = {
@@ -284,28 +292,32 @@ actor {
           ownerId = existingPayslip.ownerId;
           payPeriod;
           employeeName;
-          employeeNumber;
-          functionRole;
+          employeeId;
           designation;
+          subFunction;
+          grade;
+          businessUnit;
           location;
-          bankDetails;
           dateOfJoining;
-          taxRegime;
+          dateOfBirth;
           pan;
-          uan;
           pfAccountNumber;
-          esiNumber;
-          pran;
-          attendance;
-          leave;
+          uan;
+          daysPaid;
+          lopDays;
+          arrearDays;
           earnings;
           deductions;
-          totalEarnings;
+          totalEarningsGrossPM;
+          totalEarningsCurrentMonth;
+          totalEarningsArrear;
           totalDeductions;
-          employersContributionEPFESIC;
-          netAmount;
+          netPayable;
           amountInWords;
-          signatoryName;
+          paymentMode;
+          accountNumber;
+          bankName;
+          ifscCode;
           signDate;
           createdAt = existingPayslip.createdAt;
         };
@@ -316,19 +328,18 @@ actor {
   };
 
   public shared ({ caller }) func deletePayslip(payslipId : Nat) : async () {
-    // Auto-register user before permission check
     autoRegisterUser(caller);
     if (not AccessControl.hasPermission(accessControlState, caller, #user)) {
       Runtime.trap("Unauthorized: Only users can delete payslips");
     };
     switch (payslips.get(payslipId)) {
       case (?payslip) {
-        if (not isOwner(caller, payslip.ownerId)) {
+        if (not isOwner(caller, payslip.ownerId) and not AccessControl.isAdmin(accessControlState, caller)) {
           Runtime.trap("Unauthorized: You cannot delete this payslip");
         };
+        payslips.remove(payslipId);
       };
       case (null) { Runtime.trap("Payslip not found") };
     };
-    payslips.remove(payslipId);
   };
 };

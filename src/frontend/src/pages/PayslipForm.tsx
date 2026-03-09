@@ -107,74 +107,71 @@ const MONTHS = [
 ];
 
 interface FormState {
-  employeeName: string;
-  employeeNumber: string;
-  functionRole: string;
-  designation: string;
-  location: string;
-  bankDetails: string;
-  dateOfJoining: string;
-  taxRegime: string;
-  pan: string;
-  uan: string;
-  pfAccountNumber: string;
-  esiNumber: string;
-  pran: string;
+  // Pay Period
   payMonth: string;
   payYear: string;
-  totalDays: string;
-  present: string;
-  utilisedLeave: string;
-  weekOff: string;
-  overtimeHrs: string;
-  weeklyOffOvertimeDays: string;
-  totalAllowLeaves: string;
-  usedLeaves: string;
-  basicPay: string;
-  overtimeAmount: string;
-  weeklyOffOvertimeAmount: string;
-  employerESI: string;
-  employeeESIDeduction: string;
-  professionalTax: string;
-  employersContributionEPFESIC: string;
+  // Employee Info
+  employeeName: string;
+  employeeId: string;
+  designation: string;
+  businessUnit: string;
+  location: string;
+  dateOfJoining: string;
+  dateOfBirth: string;
+  pan: string;
+  pfAccountNumber: string;
+  // Attendance
+  daysPaid: string;
+  lopDays: string;
+  arrearDays: string;
+  // Earnings (no arrear columns)
+  basicGrossPM: string;
+  basicCurrentMonth: string;
+  mobileAllowanceGrossPM: string;
+  mobileAllowanceCurrentMonth: string;
+  statutoryBonusGrossPM: string;
+  statutoryBonusCurrentMonth: string;
+  // Deductions
+  providentFund: string;
+  professionTax: string;
+  // Payment
+  paymentMode: string;
+  accountNumber: string;
+  bankName: string;
+  ifscCode: string;
+  // Auto
   amountInWords: string;
-  signatoryName: string;
   signDate: string;
 }
 
 const defaultForm: FormState = {
-  employeeName: "",
-  employeeNumber: "",
-  functionRole: "",
-  designation: "",
-  location: "",
-  bankDetails: "",
-  dateOfJoining: "",
-  taxRegime: "Regular Tax Regime",
-  pan: "",
-  uan: "",
-  pfAccountNumber: "",
-  esiNumber: "",
-  pran: "",
   payMonth: MONTHS[new Date().getMonth()],
   payYear: String(new Date().getFullYear()),
-  totalDays: "30",
-  present: "",
-  utilisedLeave: "",
-  weekOff: "",
-  overtimeHrs: "",
-  weeklyOffOvertimeDays: "",
-  totalAllowLeaves: "",
-  usedLeaves: "",
-  basicPay: "",
-  overtimeAmount: "0",
-  weeklyOffOvertimeAmount: "0",
-  employerESI: "0",
-  employeeESIDeduction: "0",
-  professionalTax: "0",
-  employersContributionEPFESIC: "0",
+  employeeName: "",
+  employeeId: "",
+  designation: "",
+  businessUnit: "",
+  location: "",
+  dateOfJoining: "",
+  dateOfBirth: "",
+  pan: "",
+  pfAccountNumber: "",
+  daysPaid: "",
+  lopDays: "0",
+  arrearDays: "0",
+  basicGrossPM: "",
+  basicCurrentMonth: "",
+  mobileAllowanceGrossPM: "",
+  mobileAllowanceCurrentMonth: "",
+  statutoryBonusGrossPM: "",
+  statutoryBonusCurrentMonth: "",
+  providentFund: "0",
+  professionTax: "0",
+  paymentMode: "",
+  accountNumber: "",
+  bankName: "",
+  ifscCode: "",
   amountInWords: "",
-  signatoryName: "",
   signDate: getCurrentDateTime(),
 };
 
@@ -237,6 +234,61 @@ function Field({
   );
 }
 
+// Earnings table row input (2 data columns: Actual Amount + Payable Amount)
+function EarningsRow({
+  label,
+  grossPMId,
+  currentMonthId,
+  grossPMVal,
+  currentMonthVal,
+  onGrossPM,
+  onCurrentMonth,
+}: {
+  label: string;
+  grossPMId: string;
+  currentMonthId: string;
+  grossPMVal: string;
+  currentMonthVal: string;
+  onGrossPM: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onCurrentMonth: (e: React.ChangeEvent<HTMLInputElement>) => void;
+}) {
+  return (
+    <tr>
+      <td
+        className="text-sm py-2 px-3"
+        style={{
+          border: "1px solid oklch(0.88 0.008 250)",
+          color: "oklch(0.28 0.06 250)",
+        }}
+      >
+        {label}
+      </td>
+      <td style={{ border: "1px solid oklch(0.88 0.008 250)", padding: "4px" }}>
+        <Input
+          id={grossPMId}
+          type="number"
+          step="0.01"
+          value={grossPMVal}
+          onChange={onGrossPM}
+          placeholder="0.00"
+          className="h-8 text-sm text-right"
+        />
+      </td>
+      <td style={{ border: "1px solid oklch(0.88 0.008 250)", padding: "4px" }}>
+        <Input
+          id={currentMonthId}
+          type="number"
+          step="0.01"
+          value={currentMonthVal}
+          onChange={onCurrentMonth}
+          placeholder="0.00"
+          className="h-8 text-sm text-right"
+        />
+      </td>
+    </tr>
+  );
+}
+
 // ─── Main component ──────────────────────────────────────────────────────────
 export default function PayslipForm({ editId }: Props) {
   const { actor, isFetching, connectionTimedOut } = useNetworkStatus(8_000);
@@ -258,41 +310,36 @@ export default function PayslipForm({ editId }: Props) {
       .then((data: Payslip) => {
         if (cancelled) return;
         setForm({
-          employeeName: data.employeeName,
-          employeeNumber: data.employeeNumber,
-          functionRole: data.functionRole,
-          designation: data.designation,
-          location: data.location,
-          bankDetails: data.bankDetails,
-          dateOfJoining: data.dateOfJoining,
-          taxRegime: data.taxRegime,
-          pan: data.pan,
-          uan: data.uan,
-          pfAccountNumber: data.pfAccountNumber,
-          esiNumber: data.esiNumber,
-          pran: data.pran,
           payMonth: data.payPeriod.month,
           payYear: data.payPeriod.year,
-          totalDays: data.attendance.totalDays.toString(),
-          present: data.attendance.present.toString(),
-          utilisedLeave: data.attendance.utilisedLeave.toString(),
-          weekOff: data.attendance.weekOff.toString(),
-          overtimeHrs: data.attendance.overtimeHrs,
-          weeklyOffOvertimeDays:
-            data.attendance.weeklyOffOvertimeDays.toString(),
-          totalAllowLeaves: data.leave.totalAllowLeaves.toString(),
-          usedLeaves: data.leave.usedLeaves.toString(),
-          basicPay: data.earnings.basicPay.toFixed(2),
-          overtimeAmount: data.earnings.overtimeAmount.toFixed(2),
-          weeklyOffOvertimeAmount:
-            data.earnings.weeklyOffOvertimeAmount.toFixed(2),
-          employerESI: data.earnings.employerESI.toFixed(2),
-          employeeESIDeduction: data.deductions.employeeESIDeduction.toFixed(2),
-          professionalTax: data.deductions.professionalTax.toFixed(2),
-          employersContributionEPFESIC:
-            data.employersContributionEPFESIC.toFixed(2),
+          employeeName: data.employeeName,
+          employeeId: data.employeeId,
+          designation: data.designation,
+          businessUnit: data.businessUnit,
+          location: data.location,
+          dateOfJoining: data.dateOfJoining,
+          dateOfBirth: data.dateOfBirth,
+          pan: data.pan,
+          pfAccountNumber: data.pfAccountNumber,
+          daysPaid: data.daysPaid.toString(),
+          lopDays: data.lopDays.toString(),
+          arrearDays: data.arrearDays.toString(),
+          basicGrossPM: data.earnings.basicGrossPM.toFixed(2),
+          basicCurrentMonth: data.earnings.basicCurrentMonth.toFixed(2),
+          mobileAllowanceGrossPM:
+            data.earnings.mobileAllowanceGrossPM.toFixed(2),
+          mobileAllowanceCurrentMonth:
+            data.earnings.mobileAllowanceCurrentMonth.toFixed(2),
+          statutoryBonusGrossPM: data.earnings.statutoryBonusGrossPM.toFixed(2),
+          statutoryBonusCurrentMonth:
+            data.earnings.statutoryBonusCurrentMonth.toFixed(2),
+          providentFund: data.deductions.providentFund.toFixed(2),
+          professionTax: data.deductions.professionTax.toFixed(2),
+          paymentMode: data.paymentMode,
+          accountNumber: data.accountNumber,
+          bankName: data.bankName,
+          ifscCode: data.ifscCode,
           amountInWords: data.amountInWords,
-          signatoryName: data.signatoryName,
           signDate: data.signDate,
         });
       })
@@ -313,30 +360,27 @@ export default function PayslipForm({ editId }: Props) {
     (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
       setForm((prev) => ({ ...prev, [field]: e.target.value }));
 
-  // Computed values
-  const bp = Number.parseFloat(form.basicPay) || 0;
-  const ot = Number.parseFloat(form.overtimeAmount) || 0;
-  const wot = Number.parseFloat(form.weeklyOffOvertimeAmount) || 0;
-  const eESI = Number.parseFloat(form.employerESI) || 0;
-  const totalEarnings = bp + ot + wot + eESI;
+  const n = (v: string) => Number.parseFloat(v) || 0;
 
-  const esiDed = Number.parseFloat(form.employeeESIDeduction) || 0;
-  const pt = Number.parseFloat(form.professionalTax) || 0;
-  const totalDeductions = esiDed + pt;
+  // Auto-computed totals
+  const totalEarningsGrossPM =
+    n(form.basicGrossPM) +
+    n(form.mobileAllowanceGrossPM) +
+    n(form.statutoryBonusGrossPM);
 
-  const epfEsic = Number.parseFloat(form.employersContributionEPFESIC) || 0;
-  const netAmount = totalEarnings - totalDeductions;
+  const totalEarningsCurrentMonth =
+    n(form.basicCurrentMonth) +
+    n(form.mobileAllowanceCurrentMonth) +
+    n(form.statutoryBonusCurrentMonth);
 
-  const balanceLeaves = Math.max(
-    0,
-    (Number.parseInt(form.totalAllowLeaves) || 0) -
-      (Number.parseInt(form.usedLeaves) || 0),
-  );
+  const totalDeductions = n(form.providentFund) + n(form.professionTax);
 
-  // Auto-update amount in words when netAmount changes
+  const netPayable = totalEarningsCurrentMonth - totalDeductions;
+
+  // Auto-update amount in words when netPayable changes
   useEffect(() => {
-    setForm((prev) => ({ ...prev, amountInWords: numberToWords(netAmount) }));
-  }, [netAmount]);
+    setForm((prev) => ({ ...prev, amountInWords: numberToWords(netPayable) }));
+  }, [netPayable]);
 
   const handleSave = async () => {
     if (!actor) {
@@ -351,87 +395,66 @@ export default function PayslipForm({ editId }: Props) {
     setIsSaving(true);
     try {
       const payPeriod = { month: form.payMonth, year: form.payYear };
-      const attendance = {
-        totalDays: BigInt(Number.parseInt(form.totalDays) || 0),
-        present: BigInt(Number.parseInt(form.present) || 0),
-        utilisedLeave: BigInt(Number.parseInt(form.utilisedLeave) || 0),
-        weekOff: BigInt(Number.parseInt(form.weekOff) || 0),
-        overtimeHrs: form.overtimeHrs,
-        weeklyOffOvertimeDays: BigInt(
-          Number.parseInt(form.weeklyOffOvertimeDays) || 0,
-        ),
-      };
-      const leave = {
-        totalAllowLeaves: BigInt(Number.parseInt(form.totalAllowLeaves) || 0),
-        usedLeaves: BigInt(Number.parseInt(form.usedLeaves) || 0),
-        balanceLeaves: BigInt(balanceLeaves),
-      };
       const earnings = {
-        basicPay: bp,
-        overtimeAmount: ot,
-        weeklyOffOvertimeAmount: wot,
-        employerESI: eESI,
+        basicGrossPM: n(form.basicGrossPM),
+        basicCurrentMonth: n(form.basicCurrentMonth),
+        basicArrear: 0,
+        hraGrossPM: 0,
+        hraCurrentMonth: 0,
+        hraArrear: 0,
+        specialAllowanceGrossPM: 0,
+        specialAllowanceCurrentMonth: 0,
+        specialAllowanceArrear: 0,
+        mobileAllowanceGrossPM: n(form.mobileAllowanceGrossPM),
+        mobileAllowanceCurrentMonth: n(form.mobileAllowanceCurrentMonth),
+        mobileAllowanceArrear: 0,
+        statutoryBonusGrossPM: n(form.statutoryBonusGrossPM),
+        statutoryBonusCurrentMonth: n(form.statutoryBonusCurrentMonth),
+        statutoryBonusArrear: 0,
       };
-      const deductions = { employeeESIDeduction: esiDed, professionalTax: pt };
+      const deductions = {
+        providentFund: n(form.providentFund),
+        professionTax: n(form.professionTax),
+      };
+
+      const commonArgs = [
+        payPeriod,
+        form.employeeName,
+        form.employeeId,
+        form.designation,
+        "",
+        "",
+        form.businessUnit,
+        form.location,
+        form.dateOfJoining,
+        form.dateOfBirth,
+        form.pan,
+        form.pfAccountNumber,
+        "",
+        BigInt(Number.parseInt(form.daysPaid) || 0),
+        BigInt(Number.parseInt(form.lopDays) || 0),
+        BigInt(Number.parseInt(form.arrearDays) || 0),
+        earnings,
+        deductions,
+        totalEarningsGrossPM,
+        totalEarningsCurrentMonth,
+        0,
+        totalDeductions,
+        netPayable,
+        form.amountInWords,
+        form.paymentMode,
+        form.accountNumber,
+        form.bankName,
+        form.ifscCode,
+        form.signDate,
+      ] as const;
 
       if (editId) {
-        await actor.updatePayslip(
-          BigInt(editId),
-          payPeriod,
-          form.employeeName,
-          form.employeeNumber,
-          form.functionRole,
-          form.designation,
-          form.location,
-          form.bankDetails,
-          form.dateOfJoining,
-          form.taxRegime,
-          form.pan,
-          form.uan,
-          form.pfAccountNumber,
-          form.esiNumber,
-          form.pran,
-          attendance,
-          leave,
-          earnings,
-          deductions,
-          totalEarnings,
-          totalDeductions,
-          epfEsic,
-          netAmount,
-          form.amountInWords,
-          form.signatoryName,
-          form.signDate,
-        );
+        await actor.updatePayslip(BigInt(editId), ...commonArgs);
       } else {
-        await actor.createPayslip(
-          payPeriod,
-          form.employeeName,
-          form.employeeNumber,
-          form.functionRole,
-          form.designation,
-          form.location,
-          form.bankDetails,
-          form.dateOfJoining,
-          form.taxRegime,
-          form.pan,
-          form.uan,
-          form.pfAccountNumber,
-          form.esiNumber,
-          form.pran,
-          attendance,
-          leave,
-          earnings,
-          deductions,
-          totalEarnings,
-          totalDeductions,
-          epfEsic,
-          netAmount,
-          form.amountInWords,
-          form.signatoryName,
-          form.signDate,
-        );
+        await actor.createPayslip(...commonArgs);
       }
+
       toast.success("Payslip saved successfully!");
       window.location.hash = "/dashboard";
     } catch (err) {
@@ -478,6 +501,17 @@ export default function PayslipForm({ editId }: Props) {
     );
   }
 
+  const thStyle: React.CSSProperties = {
+    background: "oklch(0.28 0.08 250)",
+    color: "oklch(0.98 0 0)",
+    fontWeight: 700,
+    fontSize: "11px",
+    padding: "8px 10px",
+    textAlign: "left",
+    letterSpacing: "0.04em",
+    border: "1px solid oklch(0.22 0.07 250)",
+  };
+
   return (
     <div
       className="min-h-screen"
@@ -492,7 +526,7 @@ export default function PayslipForm({ editId }: Props) {
         }}
       >
         <div
-          className="max-w-4xl mx-auto px-4 sm:px-6"
+          className="max-w-5xl mx-auto px-4 sm:px-6"
           style={{
             padding: "14px 24px",
             display: "flex",
@@ -533,7 +567,7 @@ export default function PayslipForm({ editId }: Props) {
         </div>
       </header>
 
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 py-8">
+      <main className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
         {/* Page title */}
         <div className="mb-6">
           <h2
@@ -616,6 +650,7 @@ export default function PayslipForm({ editId }: Props) {
                 Month
               </Label>
               <select
+                data-ocid="payslip_form.select"
                 className="h-9 text-sm rounded-md px-3"
                 style={{
                   background: "oklch(1 0 0)",
@@ -649,30 +684,31 @@ export default function PayslipForm({ editId }: Props) {
             <Field
               label="Employee Name *"
               id="empName"
+              data-ocid="payslip_form.input"
               value={form.employeeName}
               onChange={set("employeeName")}
               placeholder="Full name"
             />
             <Field
-              label="Employee Number"
-              id="empNum"
-              value={form.employeeNumber}
-              onChange={set("employeeNumber")}
-              placeholder="e.g. 044"
-            />
-            <Field
-              label="Function / Role"
-              id="funcRole"
-              value={form.functionRole}
-              onChange={set("functionRole")}
-              placeholder="e.g. Flight Ticket Booking"
+              label="Employee ID"
+              id="empId"
+              value={form.employeeId}
+              onChange={set("employeeId")}
+              placeholder="e.g. EMP001"
             />
             <Field
               label="Designation"
               id="desig"
               value={form.designation}
               onChange={set("designation")}
-              placeholder="e.g. INTERNATIONAL BOOKING"
+              placeholder="e.g. Software Engineer"
+            />
+            <Field
+              label="Business Unit"
+              id="bu"
+              value={form.businessUnit}
+              onChange={set("businessUnit")}
+              placeholder="e.g. Operations"
             />
             <Field
               label="Location"
@@ -682,245 +718,266 @@ export default function PayslipForm({ editId }: Props) {
               placeholder="Work location"
             />
             <Field
-              label="Bank Details"
-              id="bank"
-              value={form.bankDetails}
-              onChange={set("bankDetails")}
-              placeholder="Bank account / details"
-            />
-            <Field
               label="Date of Joining"
               id="doj"
               value={form.dateOfJoining}
               onChange={set("dateOfJoining")}
-              placeholder="e.g. 6-May-24"
+              placeholder="e.g. 12-Jul-2021"
             />
             <Field
-              label="Tax Regime"
-              id="taxRegime"
-              value={form.taxRegime}
-              onChange={set("taxRegime")}
-              placeholder="e.g. Regular Tax Regime"
+              label="Date of Birth"
+              id="dob"
+              value={form.dateOfBirth}
+              onChange={set("dateOfBirth")}
+              placeholder="e.g. 01-Oct-1998"
             />
             <Field
-              label="PAN (Income Tax Number)"
+              label="PAN No."
               id="pan"
               value={form.pan}
               onChange={set("pan")}
               placeholder="PAN number"
             />
             <Field
-              label="UAN (Universal Account Number)"
-              id="uan"
-              value={form.uan}
-              onChange={set("uan")}
-              placeholder="UAN number"
-            />
-            <Field
-              label="PF Account Number"
+              label="Aadhar Number"
               id="pf"
               value={form.pfAccountNumber}
               onChange={set("pfAccountNumber")}
-              placeholder="PF account number"
-            />
-            <Field
-              label="ESI Number"
-              id="esi"
-              value={form.esiNumber}
-              onChange={set("esiNumber")}
-              placeholder="ESI number"
-            />
-            <Field
-              label="PRAN (PR Account Number)"
-              id="pran"
-              value={form.pran}
-              onChange={set("pran")}
-              placeholder="PRAN number"
+              placeholder="Aadhar number"
             />
           </div>
 
           <Separator className="my-5" />
 
           {/* ── Attendance ── */}
-          <SectionTitle title="Attendance Details" />
+          <SectionTitle title="Attendance" />
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
             <Field
-              label="Total Days"
-              id="totalDays"
+              label="Days Paid"
+              id="daysPaid"
               type="number"
-              value={form.totalDays}
-              onChange={set("totalDays")}
-              placeholder="30"
+              value={form.daysPaid}
+              onChange={set("daysPaid")}
+              placeholder="e.g. 26"
             />
             <Field
-              label="Present"
-              id="present"
+              label="LOP Days"
+              id="lopDays"
               type="number"
-              value={form.present}
-              onChange={set("present")}
-              placeholder="Days present"
+              value={form.lopDays}
+              onChange={set("lopDays")}
+              placeholder="0"
             />
             <Field
-              label="Utilised Leave"
-              id="utilisedLeave"
+              label="Arrear Days"
+              id="arrearDays"
               type="number"
-              value={form.utilisedLeave}
-              onChange={set("utilisedLeave")}
-              placeholder="Days"
-            />
-            <Field
-              label="Week Off"
-              id="weekOff"
-              type="number"
-              value={form.weekOff}
-              onChange={set("weekOff")}
-              placeholder="Week off days"
-            />
-            <Field
-              label="Overtime (Hrs)"
-              id="otHrs"
-              value={form.overtimeHrs}
-              onChange={set("overtimeHrs")}
-              placeholder="e.g. 33-57.00 Hrs"
-            />
-            <Field
-              label="Weekly Off Overtime (Days)"
-              id="wotDays"
-              type="number"
-              value={form.weeklyOffOvertimeDays}
-              onChange={set("weeklyOffOvertimeDays")}
-              placeholder="Days"
-            />
-          </div>
-
-          <Separator className="my-5" />
-
-          {/* ── Leave ── */}
-          <SectionTitle title="Leave Details (In Days)" />
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-            <Field
-              label="Total Allow Leaves"
-              id="totalLeaves"
-              type="number"
-              value={form.totalAllowLeaves}
-              onChange={set("totalAllowLeaves")}
-              placeholder="Total"
-            />
-            <Field
-              label="Used Leaves"
-              id="usedLeaves"
-              type="number"
-              value={form.usedLeaves}
-              onChange={set("usedLeaves")}
-              placeholder="Used"
-            />
-            <Field
-              label="Balance Leaves (Auto)"
-              id="balLeaves"
-              readOnly
-              displayValue={`${balanceLeaves} Days`}
+              value={form.arrearDays}
+              onChange={set("arrearDays")}
+              placeholder="0"
             />
           </div>
 
           <Separator className="my-5" />
 
           {/* ── Earnings ── */}
-          <SectionTitle title="Earnings" />
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-            <Field
-              label="Basic Pay (₹)"
-              id="basicPay"
-              type="number"
-              step="0.01"
-              value={form.basicPay}
-              onChange={set("basicPay")}
-              placeholder="0.00"
-            />
-            <Field
-              label="Overtime Amount (₹)"
-              id="otAmt"
-              type="number"
-              step="0.01"
-              value={form.overtimeAmount}
-              onChange={set("overtimeAmount")}
-              placeholder="0.00"
-            />
-            <Field
-              label="Weekly Off Overtime Amount (₹)"
-              id="wotAmt"
-              type="number"
-              step="0.01"
-              value={form.weeklyOffOvertimeAmount}
-              onChange={set("weeklyOffOvertimeAmount")}
-              placeholder="0.00"
-            />
-            <Field
-              label="Employer E.S.I @3.25% (₹)"
-              id="empESI"
-              type="number"
-              step="0.01"
-              value={form.employerESI}
-              onChange={set("employerESI")}
-              placeholder="0.00"
-            />
-            <Field
-              label="Total Earnings (Auto)"
-              id="totalEarnings"
-              readOnly
-              displayValue={`₹${totalEarnings.toFixed(2)}`}
-            />
+          <SectionTitle title="Salary – Earnings" />
+          <div className="overflow-x-auto">
+            <table
+              style={{
+                width: "100%",
+                borderCollapse: "collapse",
+                fontSize: "13px",
+              }}
+            >
+              <thead>
+                <tr>
+                  <th style={{ ...thStyle, width: "40%" }}>Particulars</th>
+                  <th style={{ ...thStyle, textAlign: "right", width: "30%" }}>
+                    Actual Amount (₹)
+                  </th>
+                  <th style={{ ...thStyle, textAlign: "right", width: "30%" }}>
+                    Payable Amount (₹)
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                <EarningsRow
+                  label="Basic"
+                  grossPMId="basicGrossPM"
+                  currentMonthId="basicCurrentMonth"
+                  grossPMVal={form.basicGrossPM}
+                  currentMonthVal={form.basicCurrentMonth}
+                  onGrossPM={set("basicGrossPM")}
+                  onCurrentMonth={set("basicCurrentMonth")}
+                />
+                <EarningsRow
+                  label="Mobile Allowance"
+                  grossPMId="mobileAllowanceGrossPM"
+                  currentMonthId="mobileAllowanceCurrentMonth"
+                  grossPMVal={form.mobileAllowanceGrossPM}
+                  currentMonthVal={form.mobileAllowanceCurrentMonth}
+                  onGrossPM={set("mobileAllowanceGrossPM")}
+                  onCurrentMonth={set("mobileAllowanceCurrentMonth")}
+                />
+                <EarningsRow
+                  label="Incentive"
+                  grossPMId="statutoryBonusGrossPM"
+                  currentMonthId="statutoryBonusCurrentMonth"
+                  grossPMVal={form.statutoryBonusGrossPM}
+                  currentMonthVal={form.statutoryBonusCurrentMonth}
+                  onGrossPM={set("statutoryBonusGrossPM")}
+                  onCurrentMonth={set("statutoryBonusCurrentMonth")}
+                />
+                {/* Totals row */}
+                <tr
+                  style={{
+                    background: "oklch(0.93 0.015 250)",
+                    fontWeight: 700,
+                  }}
+                >
+                  <td
+                    className="text-sm py-2 px-3 font-bold"
+                    style={{
+                      border: "1px solid oklch(0.82 0.012 250)",
+                      color: "oklch(0.18 0.08 250)",
+                    }}
+                  >
+                    Total Earnings
+                  </td>
+                  <td
+                    className="text-sm py-2 px-3 text-right font-bold"
+                    style={{
+                      border: "1px solid oklch(0.82 0.012 250)",
+                      color: "oklch(0.18 0.08 250)",
+                    }}
+                  >
+                    ₹{totalEarningsGrossPM.toFixed(2)}
+                  </td>
+                  <td
+                    className="text-sm py-2 px-3 text-right font-bold"
+                    style={{
+                      border: "1px solid oklch(0.82 0.012 250)",
+                      color: "oklch(0.18 0.08 250)",
+                    }}
+                  >
+                    ₹{totalEarningsCurrentMonth.toFixed(2)}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
 
           <Separator className="my-5" />
 
           {/* ── Deductions ── */}
-          <SectionTitle title="Deductions" />
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-            <Field
-              label="Employees ESI Deduction 0.75% (₹)"
-              id="esiDed"
-              type="number"
-              step="0.01"
-              value={form.employeeESIDeduction}
-              onChange={set("employeeESIDeduction")}
-              placeholder="0.00"
-            />
-            <Field
-              label="Professional Tax (₹)"
-              id="pt"
-              type="number"
-              step="0.01"
-              value={form.professionalTax}
-              onChange={set("professionalTax")}
-              placeholder="0.00"
-            />
-            <Field
-              label="Total Deductions (Auto)"
-              id="totalDeductions"
-              readOnly
-              displayValue={`₹${totalDeductions.toFixed(2)}`}
-            />
+          <SectionTitle title="Salary – Deductions" />
+          <div className="overflow-x-auto">
+            <table
+              style={{
+                width: "100%",
+                borderCollapse: "collapse",
+                fontSize: "13px",
+              }}
+            >
+              <thead>
+                <tr>
+                  <th style={{ ...thStyle, width: "70%" }}>Particulars</th>
+                  <th style={{ ...thStyle, textAlign: "right", width: "30%" }}>
+                    Amount (₹)
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td
+                    className="text-sm py-2 px-3"
+                    style={{
+                      border: "1px solid oklch(0.88 0.008 250)",
+                      color: "oklch(0.28 0.06 250)",
+                    }}
+                  >
+                    Insurance
+                  </td>
+                  <td
+                    style={{
+                      border: "1px solid oklch(0.88 0.008 250)",
+                      padding: "4px",
+                    }}
+                  >
+                    <Input
+                      id="providentFund"
+                      type="number"
+                      step="0.01"
+                      value={form.providentFund}
+                      onChange={set("providentFund")}
+                      placeholder="0.00"
+                      className="h-8 text-sm text-right"
+                    />
+                  </td>
+                </tr>
+                <tr>
+                  <td
+                    className="text-sm py-2 px-3"
+                    style={{
+                      border: "1px solid oklch(0.88 0.008 250)",
+                      color: "oklch(0.28 0.06 250)",
+                    }}
+                  >
+                    Profession Tax
+                  </td>
+                  <td
+                    style={{
+                      border: "1px solid oklch(0.88 0.008 250)",
+                      padding: "4px",
+                    }}
+                  >
+                    <Input
+                      id="professionTax"
+                      type="number"
+                      step="0.01"
+                      value={form.professionTax}
+                      onChange={set("professionTax")}
+                      placeholder="0.00"
+                      className="h-8 text-sm text-right"
+                    />
+                  </td>
+                </tr>
+                {/* Total deductions row */}
+                <tr style={{ background: "oklch(0.93 0.015 250)" }}>
+                  <td
+                    className="text-sm py-2 px-3 font-bold"
+                    style={{
+                      border: "1px solid oklch(0.82 0.012 250)",
+                      color: "oklch(0.18 0.08 250)",
+                    }}
+                  >
+                    Total Deductions
+                  </td>
+                  <td
+                    className="text-sm py-2 px-3 text-right font-bold"
+                    style={{
+                      border: "1px solid oklch(0.82 0.012 250)",
+                      color: "oklch(0.18 0.08 250)",
+                    }}
+                  >
+                    ₹{totalDeductions.toFixed(2)}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
 
           <Separator className="my-5" />
 
-          {/* ── Summary ── */}
-          <SectionTitle title="Summary" />
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+          {/* ── Net Payable ── */}
+          <SectionTitle title="Net Payable" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Field
-              label="Employers Contribution EPF & ESIC (₹)"
-              id="epfEsic"
-              type="number"
-              step="0.01"
-              value={form.employersContributionEPFESIC}
-              onChange={set("employersContributionEPFESIC")}
-              placeholder="0.00"
-            />
-            <Field
-              label="Net Amount in Bank (Auto)"
-              id="netAmount"
+              label="Net Payable (Auto)"
+              id="netPayable"
               readOnly
-              displayValue={`₹${netAmount.toFixed(2)}`}
+              displayValue={`₹${netPayable.toFixed(2)}`}
             />
           </div>
 
@@ -943,7 +1000,7 @@ export default function PayslipForm({ editId }: Props) {
               id="amtWords"
               value={form.amountInWords}
               onChange={set("amountInWords")}
-              placeholder="Auto-generated from Net Amount"
+              placeholder="Auto-generated from Net Payable"
               className="h-9 text-sm font-medium"
               style={{ background: "oklch(0.96 0.006 250)" }}
             />
@@ -951,16 +1008,44 @@ export default function PayslipForm({ editId }: Props) {
 
           <Separator className="my-5" />
 
-          {/* ── Signatory ── */}
-          <SectionTitle title="Signatory" />
-          <div className="grid grid-cols-2 gap-4">
+          {/* ── Payment Details ── */}
+          <SectionTitle title="Payment Details" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Field
-              label="Signatory Name"
-              id="sigName"
-              value={form.signatoryName}
-              onChange={set("signatoryName")}
-              placeholder="Name of signatory"
+              label="Payment Mode"
+              id="paymentMode"
+              value={form.paymentMode}
+              onChange={set("paymentMode")}
+              placeholder="e.g. Bank Transfer"
             />
+            <Field
+              label="Account Number"
+              id="accountNumber"
+              value={form.accountNumber}
+              onChange={set("accountNumber")}
+              placeholder="Bank account number"
+            />
+            <Field
+              label="Bank Name"
+              id="bankName"
+              value={form.bankName}
+              onChange={set("bankName")}
+              placeholder="e.g. State Bank of India"
+            />
+            <Field
+              label="IFSC Code"
+              id="ifscCode"
+              value={form.ifscCode}
+              onChange={set("ifscCode")}
+              placeholder="e.g. SBIN0001234"
+            />
+          </div>
+
+          <Separator className="my-5" />
+
+          {/* ── Sign Date ── */}
+          <SectionTitle title="Sign Date" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="flex flex-col gap-1.5">
               <Label
                 htmlFor="signDate"

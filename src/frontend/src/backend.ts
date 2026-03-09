@@ -94,63 +94,65 @@ export interface Payslip {
     uan: string;
     payPeriod: PayPeriod;
     payslipId: bigint;
-    netAmount: number;
     totalDeductions: number;
-    signatoryName: string;
     employeeName: string;
-    functionRole: string;
+    totalEarningsCurrentMonth: number;
+    totalEarningsGrossPM: number;
+    ifscCode: string;
     ownerId: Principal;
-    bankDetails: string;
+    dateOfBirth: string;
+    arrearDays: bigint;
     designation: string;
     createdAt: bigint;
-    pran: string;
     deductions: Deductions;
-    employersContributionEPFESIC: number;
+    businessUnit: string;
+    bankName: string;
     signDate: string;
-    leave: Leave;
     dateOfJoining: string;
+    subFunction: string;
+    netPayable: number;
     earnings: Earnings;
-    employeeNumber: string;
-    attendance: Attendance;
-    totalEarnings: number;
+    employeeId: string;
+    lopDays: bigint;
+    grade: string;
+    totalEarningsArrear: number;
+    paymentMode: string;
+    accountNumber: string;
     pfAccountNumber: string;
-    esiNumber: string;
     location: string;
-    taxRegime: string;
+    daysPaid: bigint;
     amountInWords: string;
 }
 export interface PayslipSummary {
     payPeriod: PayPeriod;
     payslipId: bigint;
-    netAmount: number;
     employeeName: string;
-}
-export interface Attendance {
-    overtimeHrs: string;
-    weekOff: bigint;
-    present: bigint;
-    weeklyOffOvertimeDays: bigint;
-    utilisedLeave: bigint;
-    totalDays: bigint;
-}
-export interface Leave {
-    usedLeaves: bigint;
-    balanceLeaves: bigint;
-    totalAllowLeaves: bigint;
+    netPayable: number;
 }
 export interface Deductions {
-    employeeESIDeduction: number;
-    professionalTax: number;
+    professionTax: number;
+    providentFund: number;
 }
 export interface PayPeriod {
     month: string;
     year: string;
 }
 export interface Earnings {
-    overtimeAmount: number;
-    basicPay: number;
-    weeklyOffOvertimeAmount: number;
-    employerESI: number;
+    hraGrossPM: number;
+    specialAllowanceCurrentMonth: number;
+    statutoryBonusGrossPM: number;
+    specialAllowanceGrossPM: number;
+    basicGrossPM: number;
+    mobileAllowanceCurrentMonth: number;
+    basicArrear: number;
+    basicCurrentMonth: number;
+    statutoryBonusCurrentMonth: number;
+    mobileAllowanceGrossPM: number;
+    mobileAllowanceArrear: number;
+    statutoryBonusArrear: number;
+    specialAllowanceArrear: number;
+    hraCurrentMonth: number;
+    hraArrear: number;
 }
 export interface UserProfile {
     name: string;
@@ -163,7 +165,7 @@ export enum UserRole {
 export interface backendInterface {
     _initializeAccessControlWithSecret(userSecret: string): Promise<void>;
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
-    createPayslip(payPeriod: PayPeriod, employeeName: string, employeeNumber: string, functionRole: string, designation: string, location: string, bankDetails: string, dateOfJoining: string, taxRegime: string, pan: string, uan: string, pfAccountNumber: string, esiNumber: string, pran: string, attendance: Attendance, leave: Leave, earnings: Earnings, deductions: Deductions, totalEarnings: number, totalDeductions: number, employersContributionEPFESIC: number, netAmount: number, amountInWords: string, signatoryName: string, signDate: string): Promise<void>;
+    createPayslip(payPeriod: PayPeriod, employeeName: string, employeeId: string, designation: string, subFunction: string, grade: string, businessUnit: string, location: string, dateOfJoining: string, dateOfBirth: string, pan: string, pfAccountNumber: string, uan: string, daysPaid: bigint, lopDays: bigint, arrearDays: bigint, earnings: Earnings, deductions: Deductions, totalEarningsGrossPM: number, totalEarningsCurrentMonth: number, totalEarningsArrear: number, totalDeductions: number, netPayable: number, amountInWords: string, paymentMode: string, accountNumber: string, bankName: string, ifscCode: string, signDate: string): Promise<void>;
     deletePayslip(payslipId: bigint): Promise<void>;
     getCallerUserProfile(): Promise<UserProfile | null>;
     getCallerUserRole(): Promise<UserRole>;
@@ -172,7 +174,7 @@ export interface backendInterface {
     getUserProfile(user: Principal): Promise<UserProfile | null>;
     isCallerAdmin(): Promise<boolean>;
     saveCallerUserProfile(profile: UserProfile): Promise<void>;
-    updatePayslip(payslipId: bigint, payPeriod: PayPeriod, employeeName: string, employeeNumber: string, functionRole: string, designation: string, location: string, bankDetails: string, dateOfJoining: string, taxRegime: string, pan: string, uan: string, pfAccountNumber: string, esiNumber: string, pran: string, attendance: Attendance, leave: Leave, earnings: Earnings, deductions: Deductions, totalEarnings: number, totalDeductions: number, employersContributionEPFESIC: number, netAmount: number, amountInWords: string, signatoryName: string, signDate: string): Promise<void>;
+    updatePayslip(payslipId: bigint, payPeriod: PayPeriod, employeeName: string, employeeId: string, designation: string, subFunction: string, grade: string, businessUnit: string, location: string, dateOfJoining: string, dateOfBirth: string, pan: string, pfAccountNumber: string, uan: string, daysPaid: bigint, lopDays: bigint, arrearDays: bigint, earnings: Earnings, deductions: Deductions, totalEarningsGrossPM: number, totalEarningsCurrentMonth: number, totalEarningsArrear: number, totalDeductions: number, netPayable: number, amountInWords: string, paymentMode: string, accountNumber: string, bankName: string, ifscCode: string, signDate: string): Promise<void>;
 }
 import type { UserProfile as _UserProfile, UserRole as _UserRole } from "./declarations/backend.did.d.ts";
 export class Backend implements backendInterface {
@@ -205,17 +207,17 @@ export class Backend implements backendInterface {
             return result;
         }
     }
-    async createPayslip(arg0: PayPeriod, arg1: string, arg2: string, arg3: string, arg4: string, arg5: string, arg6: string, arg7: string, arg8: string, arg9: string, arg10: string, arg11: string, arg12: string, arg13: string, arg14: Attendance, arg15: Leave, arg16: Earnings, arg17: Deductions, arg18: number, arg19: number, arg20: number, arg21: number, arg22: string, arg23: string, arg24: string): Promise<void> {
+    async createPayslip(arg0: PayPeriod, arg1: string, arg2: string, arg3: string, arg4: string, arg5: string, arg6: string, arg7: string, arg8: string, arg9: string, arg10: string, arg11: string, arg12: string, arg13: bigint, arg14: bigint, arg15: bigint, arg16: Earnings, arg17: Deductions, arg18: number, arg19: number, arg20: number, arg21: number, arg22: number, arg23: string, arg24: string, arg25: string, arg26: string, arg27: string, arg28: string): Promise<void> {
         if (this.processError) {
             try {
-                const result = await this.actor.createPayslip(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, arg12, arg13, arg14, arg15, arg16, arg17, arg18, arg19, arg20, arg21, arg22, arg23, arg24);
+                const result = await this.actor.createPayslip(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, arg12, arg13, arg14, arg15, arg16, arg17, arg18, arg19, arg20, arg21, arg22, arg23, arg24, arg25, arg26, arg27, arg28);
                 return result;
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.createPayslip(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, arg12, arg13, arg14, arg15, arg16, arg17, arg18, arg19, arg20, arg21, arg22, arg23, arg24);
+            const result = await this.actor.createPayslip(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, arg12, arg13, arg14, arg15, arg16, arg17, arg18, arg19, arg20, arg21, arg22, arg23, arg24, arg25, arg26, arg27, arg28);
             return result;
         }
     }
@@ -331,17 +333,17 @@ export class Backend implements backendInterface {
             return result;
         }
     }
-    async updatePayslip(arg0: bigint, arg1: PayPeriod, arg2: string, arg3: string, arg4: string, arg5: string, arg6: string, arg7: string, arg8: string, arg9: string, arg10: string, arg11: string, arg12: string, arg13: string, arg14: string, arg15: Attendance, arg16: Leave, arg17: Earnings, arg18: Deductions, arg19: number, arg20: number, arg21: number, arg22: number, arg23: string, arg24: string, arg25: string): Promise<void> {
+    async updatePayslip(arg0: bigint, arg1: PayPeriod, arg2: string, arg3: string, arg4: string, arg5: string, arg6: string, arg7: string, arg8: string, arg9: string, arg10: string, arg11: string, arg12: string, arg13: string, arg14: bigint, arg15: bigint, arg16: bigint, arg17: Earnings, arg18: Deductions, arg19: number, arg20: number, arg21: number, arg22: number, arg23: number, arg24: string, arg25: string, arg26: string, arg27: string, arg28: string, arg29: string): Promise<void> {
         if (this.processError) {
             try {
-                const result = await this.actor.updatePayslip(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, arg12, arg13, arg14, arg15, arg16, arg17, arg18, arg19, arg20, arg21, arg22, arg23, arg24, arg25);
+                const result = await this.actor.updatePayslip(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, arg12, arg13, arg14, arg15, arg16, arg17, arg18, arg19, arg20, arg21, arg22, arg23, arg24, arg25, arg26, arg27, arg28, arg29);
                 return result;
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.updatePayslip(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, arg12, arg13, arg14, arg15, arg16, arg17, arg18, arg19, arg20, arg21, arg22, arg23, arg24, arg25);
+            const result = await this.actor.updatePayslip(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, arg12, arg13, arg14, arg15, arg16, arg17, arg18, arg19, arg20, arg21, arg22, arg23, arg24, arg25, arg26, arg27, arg28, arg29);
             return result;
         }
     }

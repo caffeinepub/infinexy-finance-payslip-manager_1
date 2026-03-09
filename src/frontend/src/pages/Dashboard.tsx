@@ -108,19 +108,34 @@ export default function Dashboard() {
             justifyContent: "space-between",
           }}
         >
-          <div>
-            <p
-              className="font-heading font-black tracking-widest text-sm"
-              style={{ color: "oklch(0.98 0 0)", letterSpacing: "0.12em" }}
-            >
-              INFINEXY FINANCE
-            </p>
-            <p
-              className="text-xs hidden sm:block mt-0.5"
-              style={{ color: "oklch(0.78 0.03 250)" }}
-            >
-              401,402 Galav Chamber Dairy Den Sayajigunj Vadodara Gujarat-390005
-            </p>
+          <div className="flex items-center gap-3">
+            <img
+              src="/assets/uploads/WhatsApp-Image-2026-02-27-at-11.18.04-AM-2-1.jpeg"
+              alt="Infinexy Finance Logo"
+              style={{
+                height: 40,
+                width: "auto",
+                objectFit: "contain",
+                background: "#fff",
+                borderRadius: 4,
+                padding: "2px 6px",
+              }}
+            />
+            <div>
+              <p
+                className="font-heading font-black tracking-widest text-sm"
+                style={{ color: "oklch(0.98 0 0)", letterSpacing: "0.12em" }}
+              >
+                INFINEXY FINANCE
+              </p>
+              <p
+                className="text-xs hidden sm:block mt-0.5"
+                style={{ color: "oklch(0.78 0.03 250)" }}
+              >
+                401,402 Galav Chamber Dairy Den Sayajigunj Vadodara
+                Gujarat-390005
+              </p>
+            </div>
           </div>
           <div className="flex items-center gap-3">
             {userName && (
@@ -381,7 +396,7 @@ export default function Dashboard() {
                       style={{ color: "oklch(0.35 0.04 250)" }}
                     >
                       ₹
-                      {Number(slip.netAmount).toLocaleString("en-IN", {
+                      {Number(slip.netPayable).toLocaleString("en-IN", {
                         minimumFractionDigits: 2,
                         maximumFractionDigits: 2,
                       })}
