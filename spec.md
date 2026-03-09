@@ -1,19 +1,37 @@
-# Infinexy Finance Payslip Manager
+# Infinexy Finance
 
 ## Current State
-Full-stack payslip manager with Internet Identity login, a dashboard listing saved payslips, and a form to create/edit payslips. The backend uses an authorization system that requires users to be registered via `_initializeAccessControlWithSecret` before any authorized action. If a user's role is not found, the backend traps with "User is not registered", causing all payslip operations to fail for users who were not properly initialized.
+
+A full-stack ICP app (Motoko + React) for generating, saving, and printing payslips. The backend manages user profiles and payslips with authorization. The frontend has:
+- LoginPage: Internet Identity login + account name setup
+- Dashboard: lists saved payslips, create/view/delete
+- PayslipForm: full payslip data entry form with auto-calculated totals, amount in words, sign date
+- PayslipView: prints a B&W payslip document (professional layout)
+
+Company: INFINEXY FINANCE, 401,402 Galav Chamber Dairy Den Sayajigunj Vadodara Gujarat-390005
+Payslip is black-text/white-background, bold key data, computerised document notice at bottom.
 
 ## Requested Changes (Diff)
 
 ### Add
-- Auto-registration of new users: any non-anonymous principal that calls a user-gated function and is not yet in the role map should be automatically assigned the `#user` role instead of trapping.
+- Nothing new — this is a full regeneration of the frontend from scratch for a clean, professional result
 
 ### Modify
-- `getUserRole` in access-control logic: instead of trapping when the caller has no assigned role, silently assign `#user` and return it.
+- Regenerate all four pages (LoginPage, Dashboard, PayslipForm, PayslipView) with clean, polished, professional UI
+- Ensure payslip form fields all work correctly and map properly to the backend API
+- Ensure amount-in-words auto-generates from net amount
+- Ensure sign date auto-fills on form open
+- Ensure B&W payslip print view is clean and professional with all data displayed
+- Improve overall design quality: clean corporate look, well-spaced, readable
 
 ### Remove
-- Nothing removed.
+- Any leftover debugging/error-verbose code that surfaces raw backend errors to users
 
 ## Implementation Plan
-1. Regenerate Motoko backend with the same data model and API surface, but with auto-registration logic: in `getUserRole`, when a non-anonymous caller has no role entry, automatically add them as `#user` and return `#user` instead of trapping.
-2. Keep all existing types, functions, and authorization patterns unchanged except for the registration trap.
+
+1. Rewrite LoginPage.tsx — clean corporate login with company name/address, Internet Identity button, name setup step
+2. Rewrite Dashboard.tsx — header with company name, payslip card grid, create/view/delete actions, loading/error/empty states, logout
+3. Rewrite PayslipForm.tsx — all fields mapped to backend API, auto-calculated totals, amount-in-words, sign date auto-fill, save/cancel
+4. Rewrite PayslipView.tsx — clean B&W payslip document with all sections, print button, computerised document notice
+5. Keep App.tsx routing as-is (it works correctly)
+6. Keep index.css design tokens as-is

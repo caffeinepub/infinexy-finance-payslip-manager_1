@@ -9,19 +9,25 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Eye, FileText, LogOut, Plus, RefreshCw, Trash2 } from "lucide-react";
+import {
+  Eye,
+  FileText,
+  LogOut,
+  Plus,
+  RefreshCw,
+  Trash2,
+  WifiOff,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import type { PayslipSummary } from "../backend.d";
-import { useActor } from "../hooks/useActor";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
+import { useNetworkStatus } from "../hooks/useNetworkStatus";
 
 export default function Dashboard() {
   const { clear, identity } = useInternetIdentity();
-  const { actor } = useActor();
+  const { actor, connectionTimedOut } = useNetworkStatus(10_000);
   const [payslips, setPayslips] = useState<PayslipSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -31,26 +37,28 @@ export default function Dashboard() {
   useEffect(() => {
     if (!actor || !identity || identity.getPrincipal().isAnonymous()) return;
     let cancelled = false;
+
     const loadData = async () => {
       setLoading(true);
       setLoadError(null);
       try {
-        const slips = await actor.getMyPayslips();
-        if (!cancelled) setPayslips(slips);
+        const [slips, profile] = await Promise.all([
+          actor.getMyPayslips(),
+          actor.getCallerUserProfile().catch(() => null),
+        ]);
+        if (cancelled) return;
+        setPayslips(slips);
+        if (profile?.name) setUserName(profile.name);
       } catch (err) {
         if (cancelled) return;
         const msg = err instanceof Error ? err.message : String(err);
         setLoadError(msg.slice(0, 120));
-        toast.error(`Failed to load payslips: ${msg.slice(0, 80)}`);
+        toast.error("Failed to load payslips");
+      } finally {
+        if (!cancelled) setLoading(false);
       }
-      try {
-        const profile = await actor.getCallerUserProfile();
-        if (!cancelled && profile?.name) setUserName(profile.name);
-      } catch {
-        // Profile load failure is non-critical
-      }
-      if (!cancelled) setLoading(false);
     };
+
     loadData();
     return () => {
       cancelled = true;
@@ -76,50 +84,123 @@ export default function Dashboard() {
     window.location.hash = "/login";
   };
 
+  const currentYear = new Date().getFullYear();
+
   return (
-    <div className="min-h-screen bg-background">
+    <div
+      className="min-h-screen flex flex-col"
+      style={{ background: "oklch(0.975 0.005 80)" }}
+    >
       {/* Header */}
-      <header className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground shadow-md no-print">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div>
-              <p className="text-base font-bold tracking-wide">
-                INFINEXY FINANCE
-              </p>
-              <p className="text-xs text-primary-foreground/70 hidden sm:block">
-                401,402 Galav Chamber Sayajigunj Vadodara Gujarat-390005
-              </p>
-            </div>
+      <header
+        className="no-print"
+        style={{
+          background: "oklch(0.28 0.08 250)",
+          borderBottom: "1px solid oklch(0.22 0.07 250)",
+        }}
+      >
+        <div
+          className="max-w-6xl mx-auto px-4 sm:px-6"
+          style={{
+            padding: "14px 24px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}
+        >
+          <div>
+            <p
+              className="font-heading font-black tracking-widest text-sm"
+              style={{ color: "oklch(0.98 0 0)", letterSpacing: "0.12em" }}
+            >
+              INFINEXY FINANCE
+            </p>
+            <p
+              className="text-xs hidden sm:block mt-0.5"
+              style={{ color: "oklch(0.78 0.03 250)" }}
+            >
+              401,402 Galav Chamber Dairy Den Sayajigunj Vadodara Gujarat-390005
+            </p>
           </div>
           <div className="flex items-center gap-3">
             {userName && (
-              <span className="text-sm text-primary-foreground/80 hidden sm:block">
-                Welcome, <strong>{userName}</strong>
+              <span
+                className="text-sm hidden sm:block"
+                style={{ color: "oklch(0.80 0.03 250)" }}
+              >
+                Welcome,{" "}
+                <strong style={{ color: "oklch(0.98 0 0)" }}>{userName}</strong>
               </span>
             )}
             <Button
               data-ocid="dashboard.logout_button"
-              variant="outline"
               size="sm"
               onClick={handleLogout}
-              className="gap-2 border-primary-foreground/40 text-primary-foreground hover:bg-primary-foreground/10"
+              className="gap-2 h-8"
+              style={{
+                background: "oklch(0.36 0.07 250)",
+                color: "oklch(0.95 0.01 250)",
+                border: "none",
+              }}
             >
-              <LogOut className="h-4 w-4" />
-              <span className="hidden sm:inline">Logout</span>
+              <LogOut className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Sign Out</span>
             </Button>
           </div>
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
-        <div className="flex items-center justify-between mb-6">
+      {/* Main */}
+      <main className="flex-1 max-w-6xl mx-auto w-full px-4 sm:px-6 py-8">
+        {/* Network error banner */}
+        {connectionTimedOut && !actor && (
+          <div
+            data-ocid="dashboard.network.error_state"
+            className="mb-6 flex items-center gap-3 rounded-md px-4 py-3 text-sm"
+            style={{
+              background: "oklch(0.97 0.02 75)",
+              border: "1px solid oklch(0.80 0.10 75)",
+              color: "oklch(0.35 0.06 75)",
+            }}
+          >
+            <WifiOff className="h-4 w-4 shrink-0" />
+            <span className="flex-1">
+              Connection issue — the network is taking longer than expected.
+            </span>
+            <Button
+              size="sm"
+              variant="outline"
+              className="shrink-0"
+              style={{
+                borderColor: "oklch(0.70 0.10 75)",
+                color: "oklch(0.35 0.06 75)",
+              }}
+              onClick={() => window.location.reload()}
+            >
+              <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
+              Refresh
+            </Button>
+          </div>
+        )}
+
+        {/* Page heading row */}
+        <div className="flex items-start justify-between mb-7">
           <div>
-            <h2 className="text-2xl font-bold font-heading text-foreground">
+            <h2
+              className="font-heading font-bold text-2xl"
+              style={{ color: "oklch(0.18 0.06 250)" }}
+            >
               Payslips
             </h2>
-            <p className="text-muted-foreground text-sm mt-1">
-              {payslips.length} payslip{payslips.length !== 1 ? "s" : ""} saved
+            <p
+              className="text-sm mt-1"
+              style={{ color: "oklch(0.52 0.015 250)" }}
+            >
+              {!loading && !loadError
+                ? payslips.length === 0
+                  ? "No payslips saved yet"
+                  : `${payslips.length} payslip${payslips.length !== 1 ? "s" : ""} saved`
+                : " "}
             </p>
           </div>
           <Button
@@ -127,78 +208,123 @@ export default function Dashboard() {
             onClick={() => {
               window.location.hash = "/payslip/new";
             }}
-            className="gap-2 bg-accent text-accent-foreground hover:bg-accent/90 shadow-sm"
+            className="gap-2 font-semibold"
+            style={{
+              background: "oklch(0.28 0.08 250)",
+              color: "oklch(0.98 0 0)",
+              border: "none",
+            }}
           >
             <Plus className="h-4 w-4" />
             New Payslip
           </Button>
         </div>
 
+        {/* States */}
         {loading ? (
           <div
             data-ocid="dashboard.loading_state"
-            className="flex items-center justify-center py-20"
+            className="flex flex-col items-center justify-center py-24 gap-4"
           >
-            <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent" />
+            <div
+              className="animate-spin rounded-full h-9 w-9 border-2 border-t-transparent"
+              style={{
+                borderColor: "oklch(0.28 0.08 250)",
+                borderTopColor: "transparent",
+              }}
+            />
+            <p className="text-sm" style={{ color: "oklch(0.55 0.015 250)" }}>
+              Loading payslips…
+            </p>
           </div>
         ) : loadError ? (
           <div
             data-ocid="dashboard.error_state"
-            className="flex flex-col items-center justify-center py-20 text-center"
+            className="flex flex-col items-center justify-center py-24 text-center gap-4"
           >
-            <FileText className="h-14 w-14 text-destructive/30 mb-4" />
-            <h3 className="text-lg font-semibold text-foreground">
-              Failed to Load Payslips
-            </h3>
-            <p className="text-muted-foreground text-sm mt-1 mb-2 max-w-sm">
-              {loadError}
-            </p>
-            <p className="text-muted-foreground text-xs mb-6 max-w-sm">
-              This may be a temporary issue. Try refreshing the page.
-            </p>
-            <Button
-              data-ocid="dashboard.error.button"
-              onClick={() => window.location.reload()}
-              variant="outline"
-              className="gap-2"
+            <div
+              className="flex items-center justify-center rounded-full"
+              style={{
+                width: 56,
+                height: 56,
+                background: "oklch(0.97 0.01 27)",
+              }}
             >
-              <RefreshCw className="h-4 w-4" />
-              Refresh Page
+              <FileText
+                className="h-6 w-6"
+                style={{ color: "oklch(0.57 0.245 27)" }}
+              />
+            </div>
+            <div>
+              <h3
+                className="font-semibold text-base"
+                style={{ color: "oklch(0.22 0.04 250)" }}
+              >
+                Failed to Load Payslips
+              </h3>
+              <p
+                className="text-sm mt-1 max-w-sm"
+                style={{ color: "oklch(0.55 0.015 250)" }}
+              >
+                {loadError}
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2"
+              onClick={() => window.location.reload()}
+            >
+              <RefreshCw className="h-3.5 w-3.5" />
+              Retry
             </Button>
           </div>
         ) : payslips.length === 0 ? (
           <div
             data-ocid="dashboard.empty_state"
-            className="flex flex-col items-center justify-center py-20 text-center"
+            className="flex flex-col items-center justify-center py-24 text-center gap-4"
           >
-            <FileText className="h-14 w-14 text-muted-foreground/30 mb-4" />
-            <h3 className="text-lg font-semibold text-foreground">
-              No Payslips Yet
-            </h3>
-            <p className="text-muted-foreground text-sm mt-1 mb-6 max-w-sm">
-              Create your first payslip by clicking the "New Payslip" button
-              above.
-            </p>
-            <div className="flex gap-3">
-              <Button
-                onClick={() => {
-                  window.location.hash = "/payslip/new";
-                }}
-                className="gap-2"
-              >
-                <Plus className="h-4 w-4" />
-                Create First Payslip
-              </Button>
-              <Button
-                data-ocid="dashboard.empty.refresh_button"
-                variant="outline"
-                onClick={() => window.location.reload()}
-                className="gap-2"
-              >
-                <RefreshCw className="h-4 w-4" />
-                Refresh
-              </Button>
+            <div
+              className="flex items-center justify-center rounded-full"
+              style={{
+                width: 56,
+                height: 56,
+                background: "oklch(0.93 0.015 250)",
+              }}
+            >
+              <FileText
+                className="h-6 w-6"
+                style={{ color: "oklch(0.50 0.06 250)" }}
+              />
             </div>
+            <div>
+              <h3
+                className="font-semibold text-base"
+                style={{ color: "oklch(0.22 0.04 250)" }}
+              >
+                No Payslips Yet
+              </h3>
+              <p
+                className="text-sm mt-1 max-w-xs"
+                style={{ color: "oklch(0.55 0.015 250)" }}
+              >
+                Create your first payslip to get started.
+              </p>
+            </div>
+            <Button
+              onClick={() => {
+                window.location.hash = "/payslip/new";
+              }}
+              className="gap-2 font-semibold"
+              style={{
+                background: "oklch(0.28 0.08 250)",
+                color: "oklch(0.98 0 0)",
+                border: "none",
+              }}
+            >
+              <Plus className="h-4 w-4" />
+              Create First Payslip
+            </Button>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -206,88 +332,148 @@ export default function Dashboard() {
               <div
                 key={slip.payslipId.toString()}
                 data-ocid={`dashboard.payslip.item.${idx + 1}`}
+                className="rounded-lg"
+                style={{
+                  background: "oklch(1 0 0)",
+                  border: "1px solid oklch(0.88 0.008 250)",
+                  borderLeft: "4px solid oklch(0.28 0.08 250)",
+                  boxShadow: "0 2px 8px 0 rgba(0,0,0,0.06)",
+                  overflow: "hidden",
+                }}
               >
-                <Card className="shadow-card hover:shadow-md transition-shadow border-l-4 border-l-primary">
-                  <CardHeader className="pb-3">
-                    <div className="flex items-start justify-between gap-2">
-                      <CardTitle className="text-base font-semibold text-foreground truncate">
-                        {slip.employeeName || "Unknown Employee"}
-                      </CardTitle>
-                      <Badge className="bg-primary/10 text-primary border-0 shrink-0 text-xs">
-                        {slip.payPeriod.month} {slip.payPeriod.year}
-                      </Badge>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div>
-                      <p className="text-xs text-muted-foreground">
-                        Net Amount
-                      </p>
-                      <p className="text-xl font-bold text-accent">
-                        ₹
-                        {Number(slip.netAmount).toLocaleString("en-IN", {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                        })}
-                      </p>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button
-                        data-ocid={`dashboard.payslip.view_button.${idx + 1}`}
-                        variant="default"
-                        size="sm"
-                        className="flex-1 gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90"
-                        onClick={() => {
-                          window.location.hash = `/payslip/${slip.payslipId.toString()}`;
-                        }}
-                      >
-                        <Eye className="h-3.5 w-3.5" />
-                        View
-                      </Button>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button
-                            data-ocid={`dashboard.payslip.delete_button.${idx + 1}`}
-                            variant="outline"
-                            size="sm"
-                            className="gap-1.5 text-destructive hover:text-destructive"
-                            disabled={deletingId === slip.payslipId}
-                          >
+                {/* Card top */}
+                <div
+                  style={{
+                    padding: "14px 16px 10px",
+                    borderBottom: "1px solid oklch(0.93 0.005 250)",
+                  }}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <h3
+                      className="font-semibold text-sm truncate"
+                      style={{ color: "oklch(0.18 0.06 250)" }}
+                    >
+                      {slip.employeeName || "Unknown Employee"}
+                    </h3>
+                    <span
+                      className="text-xs font-medium shrink-0 rounded-full px-2 py-0.5"
+                      style={{
+                        background: "oklch(0.93 0.015 250)",
+                        color: "oklch(0.40 0.06 250)",
+                      }}
+                    >
+                      {slip.payPeriod.month} {slip.payPeriod.year}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Card bottom */}
+                <div style={{ padding: "10px 16px 14px" }}>
+                  <div className="mb-4">
+                    <p
+                      className="text-xs mb-0.5"
+                      style={{ color: "oklch(0.60 0.010 250)" }}
+                    >
+                      Net Amount
+                    </p>
+                    <p
+                      className="text-xl font-bold"
+                      style={{ color: "oklch(0.35 0.04 250)" }}
+                    >
+                      ₹
+                      {Number(slip.netAmount).toLocaleString("en-IN", {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
+                    </p>
+                  </div>
+
+                  <div className="flex gap-2">
+                    <Button
+                      data-ocid={`dashboard.payslip.view_button.${idx + 1}`}
+                      size="sm"
+                      className="flex-1 gap-1.5 font-medium"
+                      style={{
+                        background: "oklch(0.28 0.08 250)",
+                        color: "oklch(0.98 0 0)",
+                        border: "none",
+                      }}
+                      onClick={() => {
+                        window.location.hash = `/payslip/${slip.payslipId.toString()}`;
+                      }}
+                    >
+                      <Eye className="h-3.5 w-3.5" />
+                      View
+                    </Button>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          data-ocid={`dashboard.payslip.delete_button.${idx + 1}`}
+                          variant="outline"
+                          size="sm"
+                          className="gap-1.5"
+                          disabled={deletingId === slip.payslipId}
+                          style={{
+                            borderColor: "oklch(0.85 0.01 27)",
+                            color: "oklch(0.57 0.245 27)",
+                          }}
+                        >
+                          {deletingId === slip.payslipId ? (
+                            <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
                             <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent data-ocid="dashboard.payslip.dialog">
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Delete Payslip?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              This will permanently delete the payslip for{" "}
-                              <strong>{slip.employeeName}</strong> (
-                              {slip.payPeriod.month} {slip.payPeriod.year}).
-                              This action cannot be undone.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel data-ocid="dashboard.payslip.cancel_button">
-                              Cancel
-                            </AlertDialogCancel>
-                            <AlertDialogAction
-                              data-ocid="dashboard.payslip.confirm_button"
-                              onClick={() => handleDelete(slip.payslipId)}
-                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                            >
-                              Delete
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </div>
-                  </CardContent>
-                </Card>
+                          )}
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent data-ocid="dashboard.payslip.dialog">
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Delete Payslip?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This will permanently delete the payslip for{" "}
+                            <strong>{slip.employeeName}</strong> (
+                            {slip.payPeriod.month} {slip.payPeriod.year}). This
+                            action cannot be undone.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel data-ocid="dashboard.payslip.cancel_button">
+                            Cancel
+                          </AlertDialogCancel>
+                          <AlertDialogAction
+                            data-ocid="dashboard.payslip.confirm_button"
+                            onClick={() => handleDelete(slip.payslipId)}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          >
+                            Delete
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
+                </div>
               </div>
             ))}
           </div>
         )}
       </main>
+
+      {/* Footer */}
+      <footer
+        className="no-print py-4 text-center"
+        style={{ borderTop: "1px solid oklch(0.88 0.008 250)" }}
+      >
+        <p className="text-xs" style={{ color: "oklch(0.62 0.010 250)" }}>
+          © {currentYear}. Built with ♥ using{" "}
+          <a
+            href={`https://caffeine.ai?utm_source=caffeine-footer&utm_medium=referral&utm_content=${encodeURIComponent(window.location.hostname)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline underline-offset-2"
+          >
+            caffeine.ai
+          </a>
+        </p>
+      </footer>
     </div>
   );
 }
