@@ -16,8 +16,9 @@ export default {
     },
     extend: {
       fontFamily: {
-        sans: ['"Plus Jakarta Sans"', "system-ui", "sans-serif"],
-        heading: ['"Bricolage Grotesque"', '"Outfit"', "system-ui", "sans-serif"],
+        sans: ['"Outfit"', "system-ui", "sans-serif"],
+        heading: ['"Bricolage Grotesque"', "system-ui", "sans-serif"],
+        body: ['"Outfit"', "system-ui", "sans-serif"],
       },
       colors: {
         border: "oklch(var(--border))",
@@ -53,7 +54,6 @@ export default {
           DEFAULT: "oklch(var(--card))",
           foreground: "oklch(var(--card-foreground))",
         },
-        gold: "oklch(var(--accent) / <alpha-value>)",
         chart: {
           1: "oklch(var(--chart-1))",
           2: "oklch(var(--chart-2))",
@@ -74,12 +74,14 @@ export default {
       },
       borderRadius: {
         lg: "var(--radius)",
-        md: "calc(var(--radius) - 2px)",
-        sm: "calc(var(--radius) - 4px)",
+        md: "calc(var(--radius) - 1px)",
+        sm: "calc(var(--radius) - 2px)",
       },
       boxShadow: {
-        xs: "0 1px 2px 0 rgba(0,0,0,0.05)",
-        card: "0 2px 8px 0 rgba(0,0,0,0.08)",
+        xs: "0 1px 2px 0 rgba(0,0,0,0.04)",
+        card: "0 1px 4px 0 rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.04)",
+        "card-hover": "0 4px 12px 0 rgba(0,0,0,0.10), 0 0 0 1px rgba(0,0,0,0.04)",
+        elevated: "0 4px 16px 0 rgba(0,0,0,0.08)",
       },
       keyframes: {
         "accordion-down": {

@@ -107,10 +107,8 @@ const MONTHS = [
 ];
 
 interface FormState {
-  // Pay Period
   payMonth: string;
   payYear: string;
-  // Employee Info
   employeeName: string;
   employeeId: string;
   designation: string;
@@ -120,26 +118,19 @@ interface FormState {
   dateOfBirth: string;
   pan: string;
   pfAccountNumber: string;
-  // Attendance
   daysPaid: string;
-  lopDays: string;
-  arrearDays: string;
-  // Earnings (no arrear columns)
   basicGrossPM: string;
   basicCurrentMonth: string;
   mobileAllowanceGrossPM: string;
   mobileAllowanceCurrentMonth: string;
   statutoryBonusGrossPM: string;
   statutoryBonusCurrentMonth: string;
-  // Deductions
   providentFund: string;
   professionTax: string;
-  // Payment
   paymentMode: string;
   accountNumber: string;
   bankName: string;
   ifscCode: string;
-  // Auto
   amountInWords: string;
   signDate: string;
 }
@@ -157,8 +148,6 @@ const defaultForm: FormState = {
   pan: "",
   pfAccountNumber: "",
   daysPaid: "",
-  lopDays: "0",
-  arrearDays: "0",
   basicGrossPM: "",
   basicCurrentMonth: "",
   mobileAllowanceGrossPM: "",
@@ -175,19 +164,33 @@ const defaultForm: FormState = {
   signDate: getCurrentDateTime(),
 };
 
+// ─── Design constants ────────────────────────────────────────────────────────
+const NAV_BG = "oklch(0.22 0.05 250)";
+const NAV_BG_DARK = "oklch(0.17 0.04 250)";
+const ACCENT = "oklch(0.48 0.10 195)";
+const WHITE = "oklch(0.98 0 0)";
+const TEXT_MAIN = "oklch(0.18 0.04 250)";
+const TEXT_MID = "oklch(0.52 0.015 250)";
+const TEXT_DIM = "oklch(0.70 0.02 250)";
+const BORDER = "oklch(0.88 0.006 250)";
+const BG_PAGE = "oklch(0.97 0.003 250)";
+
 // ─── Sub-components ──────────────────────────────────────────────────────────
 function SectionTitle({ title }: { title: string }) {
   return (
-    <div
-      className="mt-7 mb-4"
-      style={{
-        borderLeft: "3px solid oklch(0.28 0.08 250)",
-        paddingLeft: 10,
-      }}
-    >
+    <div className="mt-7 mb-4 flex items-center gap-3">
+      <div
+        style={{
+          width: 3,
+          height: 18,
+          background: ACCENT,
+          borderRadius: 2,
+          flexShrink: 0,
+        }}
+      />
       <h3
-        className="text-xs font-bold uppercase tracking-widest"
-        style={{ color: "oklch(0.28 0.08 250)", letterSpacing: "0.1em" }}
+        className="text-xs font-bold uppercase tracking-widest font-heading"
+        style={{ color: TEXT_MAIN, letterSpacing: "0.10em" }}
       >
         {title}
       </h3>
@@ -212,7 +215,7 @@ function Field({
       <Label
         htmlFor={id}
         className="text-xs font-medium"
-        style={{ color: "oklch(0.50 0.015 250)" }}
+        style={{ color: TEXT_MID }}
       >
         {label}
       </Label>
@@ -220,9 +223,9 @@ function Field({
         <div
           className="h-9 px-3 flex items-center rounded-md text-sm font-bold"
           style={{
-            background: "oklch(0.93 0.015 250)",
-            color: "oklch(0.28 0.08 250)",
-            border: "1px solid oklch(0.86 0.012 250)",
+            background: "oklch(0.93 0.008 250)",
+            color: TEXT_MAIN,
+            border: "1px solid oklch(0.86 0.006 250)",
           }}
         >
           {displayValue}
@@ -234,7 +237,6 @@ function Field({
   );
 }
 
-// Earnings table row input (2 data columns: Actual Amount + Payable Amount)
 function EarningsRow({
   label,
   grossPMId,
@@ -256,14 +258,11 @@ function EarningsRow({
     <tr>
       <td
         className="text-sm py-2 px-3"
-        style={{
-          border: "1px solid oklch(0.88 0.008 250)",
-          color: "oklch(0.28 0.06 250)",
-        }}
+        style={{ border: `1px solid ${BORDER}`, color: TEXT_MAIN }}
       >
         {label}
       </td>
-      <td style={{ border: "1px solid oklch(0.88 0.008 250)", padding: "4px" }}>
+      <td style={{ border: `1px solid ${BORDER}`, padding: "4px" }}>
         <Input
           id={grossPMId}
           type="number"
@@ -274,7 +273,7 @@ function EarningsRow({
           className="h-8 text-sm text-right"
         />
       </td>
-      <td style={{ border: "1px solid oklch(0.88 0.008 250)", padding: "4px" }}>
+      <td style={{ border: `1px solid ${BORDER}`, padding: "4px" }}>
         <Input
           id={currentMonthId}
           type="number"
@@ -296,7 +295,6 @@ export default function PayslipForm({ editId }: Props) {
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(!!editId);
 
-  // Load existing payslip for edit
   useEffect(() => {
     if (!editId) {
       setIsLoading(false);
@@ -322,8 +320,6 @@ export default function PayslipForm({ editId }: Props) {
           pan: data.pan,
           pfAccountNumber: data.pfAccountNumber,
           daysPaid: data.daysPaid.toString(),
-          lopDays: data.lopDays.toString(),
-          arrearDays: data.arrearDays.toString(),
           basicGrossPM: data.earnings.basicGrossPM.toFixed(2),
           basicCurrentMonth: data.earnings.basicCurrentMonth.toFixed(2),
           mobileAllowanceGrossPM:
@@ -362,22 +358,17 @@ export default function PayslipForm({ editId }: Props) {
 
   const n = (v: string) => Number.parseFloat(v) || 0;
 
-  // Auto-computed totals
   const totalEarningsGrossPM =
     n(form.basicGrossPM) +
     n(form.mobileAllowanceGrossPM) +
     n(form.statutoryBonusGrossPM);
-
   const totalEarningsCurrentMonth =
     n(form.basicCurrentMonth) +
     n(form.mobileAllowanceCurrentMonth) +
     n(form.statutoryBonusCurrentMonth);
-
   const totalDeductions = n(form.providentFund) + n(form.professionTax);
-
   const netPayable = totalEarningsCurrentMonth - totalDeductions;
 
-  // Auto-update amount in words when netPayable changes
   useEffect(() => {
     setForm((prev) => ({ ...prev, amountInWords: numberToWords(netPayable) }));
   }, [netPayable]);
@@ -432,8 +423,8 @@ export default function PayslipForm({ editId }: Props) {
         form.pfAccountNumber,
         "",
         BigInt(Number.parseInt(form.daysPaid) || 0),
-        BigInt(Number.parseInt(form.lopDays) || 0),
-        BigInt(Number.parseInt(form.arrearDays) || 0),
+        0n, // lopDays (removed from UI)
+        0n, // arrearDays (removed from UI)
         earnings,
         deductions,
         totalEarningsGrossPM,
@@ -486,14 +477,11 @@ export default function PayslipForm({ editId }: Props) {
       <div
         data-ocid="payslip_form.loading_state"
         className="min-h-screen flex items-center justify-center"
-        style={{ background: "oklch(0.975 0.005 80)" }}
+        style={{ background: BG_PAGE }}
       >
         <div className="flex flex-col items-center gap-3">
-          <Loader2
-            className="h-8 w-8 animate-spin"
-            style={{ color: "oklch(0.28 0.08 250)" }}
-          />
-          <p className="text-sm" style={{ color: "oklch(0.55 0.015 250)" }}>
+          <Loader2 className="h-8 w-8 animate-spin" style={{ color: ACCENT }} />
+          <p className="text-sm" style={{ color: TEXT_MID }}>
             Loading payslip…
           </p>
         </div>
@@ -502,33 +490,34 @@ export default function PayslipForm({ editId }: Props) {
   }
 
   const thStyle: React.CSSProperties = {
-    background: "oklch(0.28 0.08 250)",
-    color: "oklch(0.98 0 0)",
+    background: NAV_BG,
+    color: WHITE,
     fontWeight: 700,
     fontSize: "11px",
-    padding: "8px 10px",
+    padding: "9px 12px",
     textAlign: "left",
-    letterSpacing: "0.04em",
-    border: "1px solid oklch(0.22 0.07 250)",
+    letterSpacing: "0.06em",
+    border: `1px solid ${NAV_BG_DARK}`,
+    fontFamily: "'Outfit', system-ui, sans-serif",
+    textTransform: "uppercase" as const,
   };
 
   return (
-    <div
-      className="min-h-screen"
-      style={{ background: "oklch(0.975 0.005 80)" }}
-    >
-      {/* Header */}
+    <div className="min-h-screen" style={{ background: BG_PAGE }}>
+      {/* ── Header ── */}
       <header
-        className="no-print"
+        className="no-print sticky top-0 z-20"
         style={{
-          background: "oklch(0.28 0.08 250)",
-          borderBottom: "1px solid oklch(0.22 0.07 250)",
+          background: NAV_BG,
+          borderBottom: `1px solid ${NAV_BG_DARK}`,
+          boxShadow: "0 1px 8px 0 rgba(0,0,0,0.12)",
         }}
       >
         <div
-          className="max-w-5xl mx-auto px-4 sm:px-6"
+          className="max-w-5xl mx-auto"
           style={{
-            padding: "14px 24px",
+            padding: "0 24px",
+            height: 60,
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
@@ -536,15 +525,12 @@ export default function PayslipForm({ editId }: Props) {
         >
           <div>
             <p
-              className="font-heading font-black tracking-widest text-sm"
-              style={{ color: "oklch(0.98 0 0)", letterSpacing: "0.12em" }}
+              className="font-heading font-black text-sm tracking-widest leading-none"
+              style={{ color: WHITE, letterSpacing: "0.12em" }}
             >
               INFINEXY FINANCE
             </p>
-            <p
-              className="text-xs mt-0.5"
-              style={{ color: "oklch(0.78 0.03 250)" }}
-            >
+            <p className="text-xs mt-0.5" style={{ color: TEXT_DIM }}>
               {editId ? "Edit Payslip" : "New Payslip"}
             </p>
           </div>
@@ -554,11 +540,11 @@ export default function PayslipForm({ editId }: Props) {
             onClick={() => {
               window.location.hash = "/dashboard";
             }}
-            className="gap-2 h-8"
+            className="gap-2 h-8 text-xs font-medium"
             style={{
-              background: "oklch(0.36 0.07 250)",
-              color: "oklch(0.95 0.01 250)",
-              border: "none",
+              background: "oklch(0.30 0.06 250)",
+              color: "oklch(0.88 0.01 250)",
+              border: "1px solid oklch(0.34 0.06 250)",
             }}
           >
             <ArrowLeft className="h-3.5 w-3.5" />
@@ -572,15 +558,12 @@ export default function PayslipForm({ editId }: Props) {
         <div className="mb-6">
           <h2
             className="font-heading font-bold text-2xl"
-            style={{ color: "oklch(0.18 0.06 250)" }}
+            style={{ color: TEXT_MAIN }}
           >
             {editId ? "Edit Payslip" : "New Payslip"}
           </h2>
-          <p
-            className="text-sm mt-1"
-            style={{ color: "oklch(0.55 0.015 250)" }}
-          >
-            Fill in all employee and salary information below.
+          <p className="text-sm mt-0.5" style={{ color: TEXT_MID }}>
+            Fill in all employee and salary details below.
           </p>
         </div>
 
@@ -590,9 +573,9 @@ export default function PayslipForm({ editId }: Props) {
             data-ocid="payslip_form.loading_state"
             className="mb-4 flex items-center gap-2 rounded-md px-4 py-3 text-sm"
             style={{
-              background: "oklch(0.96 0.006 250)",
-              border: "1px solid oklch(0.88 0.008 250)",
-              color: "oklch(0.50 0.015 250)",
+              background: "oklch(0.95 0.005 250)",
+              border: `1px solid ${BORDER}`,
+              color: TEXT_MID,
             }}
           >
             <Loader2 className="h-4 w-4 animate-spin shrink-0" />
@@ -604,23 +587,19 @@ export default function PayslipForm({ editId }: Props) {
             data-ocid="payslip_form.network.error_state"
             className="mb-4 flex items-center gap-3 rounded-md px-4 py-3 text-sm"
             style={{
-              background: "oklch(0.97 0.02 75)",
-              border: "1px solid oklch(0.80 0.10 75)",
-              color: "oklch(0.35 0.06 75)",
+              background: "oklch(0.97 0.02 60)",
+              border: "1px solid oklch(0.82 0.10 60)",
+              color: "oklch(0.35 0.06 60)",
             }}
           >
             <WifiOff className="h-4 w-4 shrink-0" />
             <span className="flex-1">
-              Unable to connect to the network. Check your internet connection.
+              Unable to connect. Check your internet connection.
             </span>
             <Button
               size="sm"
               variant="outline"
               className="shrink-0"
-              style={{
-                borderColor: "oklch(0.70 0.10 75)",
-                color: "oklch(0.35 0.06 75)",
-              }}
               onClick={() => window.location.reload()}
             >
               <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
@@ -629,14 +608,14 @@ export default function PayslipForm({ editId }: Props) {
           </div>
         )}
 
-        {/* Form card */}
+        {/* ── Form card ── */}
         <div
-          className="rounded-lg"
+          className="rounded-md"
           style={{
             background: "oklch(1 0 0)",
-            border: "1px solid oklch(0.88 0.008 250)",
-            boxShadow: "0 2px 10px 0 rgba(0,0,0,0.06)",
-            padding: "8px 24px 28px",
+            border: `1px solid ${BORDER}`,
+            boxShadow: "0 1px 6px 0 rgba(0,0,0,0.05)",
+            padding: "8px 28px 32px",
           }}
         >
           {/* ── Pay Period ── */}
@@ -645,7 +624,7 @@ export default function PayslipForm({ editId }: Props) {
             <div className="flex flex-col gap-1.5">
               <Label
                 className="text-xs font-medium"
-                style={{ color: "oklch(0.50 0.015 250)" }}
+                style={{ color: TEXT_MID }}
               >
                 Month
               </Label>
@@ -654,8 +633,9 @@ export default function PayslipForm({ editId }: Props) {
                 className="h-9 text-sm rounded-md px-3"
                 style={{
                   background: "oklch(1 0 0)",
-                  border: "1px solid oklch(0.88 0.008 250)",
-                  color: "oklch(0.18 0.06 250)",
+                  border: `1px solid ${BORDER}`,
+                  color: TEXT_MAIN,
+                  outline: "none",
                 }}
                 value={form.payMonth}
                 onChange={set("payMonth")}
@@ -751,7 +731,7 @@ export default function PayslipForm({ editId }: Props) {
 
           {/* ── Attendance ── */}
           <SectionTitle title="Attendance" />
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Field
               label="Days Paid"
               id="daysPaid"
@@ -759,22 +739,6 @@ export default function PayslipForm({ editId }: Props) {
               value={form.daysPaid}
               onChange={set("daysPaid")}
               placeholder="e.g. 26"
-            />
-            <Field
-              label="LOP Days"
-              id="lopDays"
-              type="number"
-              value={form.lopDays}
-              onChange={set("lopDays")}
-              placeholder="0"
-            />
-            <Field
-              label="Arrear Days"
-              id="arrearDays"
-              type="number"
-              value={form.arrearDays}
-              onChange={set("arrearDays")}
-              placeholder="0"
             />
           </div>
 
@@ -829,18 +793,13 @@ export default function PayslipForm({ editId }: Props) {
                   onGrossPM={set("statutoryBonusGrossPM")}
                   onCurrentMonth={set("statutoryBonusCurrentMonth")}
                 />
-                {/* Totals row */}
-                <tr
-                  style={{
-                    background: "oklch(0.93 0.015 250)",
-                    fontWeight: 700,
-                  }}
-                >
+                {/* Totals */}
+                <tr style={{ background: "oklch(0.93 0.006 250)" }}>
                   <td
                     className="text-sm py-2 px-3 font-bold"
                     style={{
-                      border: "1px solid oklch(0.82 0.012 250)",
-                      color: "oklch(0.18 0.08 250)",
+                      border: "1px solid oklch(0.85 0.006 250)",
+                      color: TEXT_MAIN,
                     }}
                   >
                     Total Earnings
@@ -848,8 +807,8 @@ export default function PayslipForm({ editId }: Props) {
                   <td
                     className="text-sm py-2 px-3 text-right font-bold"
                     style={{
-                      border: "1px solid oklch(0.82 0.012 250)",
-                      color: "oklch(0.18 0.08 250)",
+                      border: "1px solid oklch(0.85 0.006 250)",
+                      color: TEXT_MAIN,
                     }}
                   >
                     ₹{totalEarningsGrossPM.toFixed(2)}
@@ -857,8 +816,8 @@ export default function PayslipForm({ editId }: Props) {
                   <td
                     className="text-sm py-2 px-3 text-right font-bold"
                     style={{
-                      border: "1px solid oklch(0.82 0.012 250)",
-                      color: "oklch(0.18 0.08 250)",
+                      border: "1px solid oklch(0.85 0.006 250)",
+                      color: TEXT_MAIN,
                     }}
                   >
                     ₹{totalEarningsCurrentMonth.toFixed(2)}
@@ -892,19 +851,11 @@ export default function PayslipForm({ editId }: Props) {
                 <tr>
                   <td
                     className="text-sm py-2 px-3"
-                    style={{
-                      border: "1px solid oklch(0.88 0.008 250)",
-                      color: "oklch(0.28 0.06 250)",
-                    }}
+                    style={{ border: `1px solid ${BORDER}`, color: TEXT_MAIN }}
                   >
                     Insurance
                   </td>
-                  <td
-                    style={{
-                      border: "1px solid oklch(0.88 0.008 250)",
-                      padding: "4px",
-                    }}
-                  >
+                  <td style={{ border: `1px solid ${BORDER}`, padding: "4px" }}>
                     <Input
                       id="providentFund"
                       type="number"
@@ -919,19 +870,11 @@ export default function PayslipForm({ editId }: Props) {
                 <tr>
                   <td
                     className="text-sm py-2 px-3"
-                    style={{
-                      border: "1px solid oklch(0.88 0.008 250)",
-                      color: "oklch(0.28 0.06 250)",
-                    }}
+                    style={{ border: `1px solid ${BORDER}`, color: TEXT_MAIN }}
                   >
                     Profession Tax
                   </td>
-                  <td
-                    style={{
-                      border: "1px solid oklch(0.88 0.008 250)",
-                      padding: "4px",
-                    }}
-                  >
+                  <td style={{ border: `1px solid ${BORDER}`, padding: "4px" }}>
                     <Input
                       id="professionTax"
                       type="number"
@@ -943,13 +886,12 @@ export default function PayslipForm({ editId }: Props) {
                     />
                   </td>
                 </tr>
-                {/* Total deductions row */}
-                <tr style={{ background: "oklch(0.93 0.015 250)" }}>
+                <tr style={{ background: "oklch(0.93 0.006 250)" }}>
                   <td
                     className="text-sm py-2 px-3 font-bold"
                     style={{
-                      border: "1px solid oklch(0.82 0.012 250)",
-                      color: "oklch(0.18 0.08 250)",
+                      border: "1px solid oklch(0.85 0.006 250)",
+                      color: TEXT_MAIN,
                     }}
                   >
                     Total Deductions
@@ -957,8 +899,8 @@ export default function PayslipForm({ editId }: Props) {
                   <td
                     className="text-sm py-2 px-3 text-right font-bold"
                     style={{
-                      border: "1px solid oklch(0.82 0.012 250)",
-                      color: "oklch(0.18 0.08 250)",
+                      border: "1px solid oklch(0.85 0.006 250)",
+                      color: TEXT_MAIN,
                     }}
                   >
                     ₹{totalDeductions.toFixed(2)}
@@ -981,18 +923,14 @@ export default function PayslipForm({ editId }: Props) {
             />
           </div>
 
-          {/* Amount in Words */}
           <div className="mt-4 flex flex-col gap-1.5">
             <Label
               htmlFor="amtWords"
               className="text-xs font-medium"
-              style={{ color: "oklch(0.50 0.015 250)" }}
+              style={{ color: TEXT_MID }}
             >
               Amount in Words{" "}
-              <span
-                className="font-semibold"
-                style={{ color: "oklch(0.28 0.08 250)" }}
-              >
+              <span className="font-semibold" style={{ color: ACCENT }}>
                 (Auto)
               </span>
             </Label>
@@ -1002,7 +940,7 @@ export default function PayslipForm({ editId }: Props) {
               onChange={set("amountInWords")}
               placeholder="Auto-generated from Net Payable"
               className="h-9 text-sm font-medium"
-              style={{ background: "oklch(0.96 0.006 250)" }}
+              style={{ background: "oklch(0.95 0.004 250)" }}
             />
           </div>
 
@@ -1050,13 +988,10 @@ export default function PayslipForm({ editId }: Props) {
               <Label
                 htmlFor="signDate"
                 className="text-xs font-medium"
-                style={{ color: "oklch(0.50 0.015 250)" }}
+                style={{ color: TEXT_MID }}
               >
                 Sign Date{" "}
-                <span
-                  className="font-semibold"
-                  style={{ color: "oklch(0.28 0.08 250)" }}
-                >
+                <span className="font-semibold" style={{ color: ACCENT }}>
                   (Auto)
                 </span>
               </Label>
@@ -1066,25 +1001,26 @@ export default function PayslipForm({ editId }: Props) {
                 onChange={set("signDate")}
                 placeholder="DD-MM-YYYY HH:MM:SS"
                 className="h-9 text-sm font-medium"
-                style={{ background: "oklch(0.96 0.006 250)" }}
+                style={{ background: "oklch(0.95 0.004 250)" }}
               />
             </div>
           </div>
 
           {/* ── Actions ── */}
           <div
-            className="flex gap-3 mt-8 pt-4"
-            style={{ borderTop: "1px solid oklch(0.90 0.006 250)" }}
+            className="flex gap-3 mt-8 pt-5"
+            style={{ borderTop: "1px solid oklch(0.91 0.005 250)" }}
           >
             <Button
               data-ocid="payslip_form.submit_button"
               onClick={handleSave}
               disabled={isSaving || !actor}
-              className="gap-2 font-semibold px-6"
+              className="gap-2 font-semibold px-6 h-10"
               style={{
-                background: "oklch(0.28 0.08 250)",
-                color: "oklch(0.98 0 0)",
+                background: ACCENT,
+                color: WHITE,
                 border: "none",
+                borderRadius: 6,
               }}
             >
               {isSaving ? (
@@ -1102,6 +1038,7 @@ export default function PayslipForm({ editId }: Props) {
             <Button
               data-ocid="payslip_form.cancel_button"
               variant="outline"
+              className="h-10"
               onClick={() => {
                 window.location.hash = "/dashboard";
               }}
